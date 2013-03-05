@@ -13,13 +13,19 @@ def plot_steptimes(steptimes):
     ax1.set_ylabel('step time [in seconds]')
     plt.show()
 
-def plot_energy(energy, value_in="units.J"):
+def plot_energy(energy, energy_error, value_in="units.J"):
     energy = eval("energy.value_in("+value_in+")")
     fig = plt.figure()
-    ax1 = fig.add_subplot(111)
+    ax1 = fig.add_subplot(211)
+    ax2 = fig.add_subplot(212)
+
     ax1.plot(range(len(energy)), energy, **yellowline)
     ax1.set_xlabel('N')
     ax1.set_ylabel('energy [%s]'%value_in)
+
+    ax2.plot(range(len(energy)), energy_error, **yellowline)
+    ax2.set_xlabel('N')
+    ax2.set_ylabel('energy_error')
     plt.show()
 
 
