@@ -11,6 +11,7 @@ from amuse.io.base import write_set_to_file
 import plotter
 
 def main(options):
+    start_time = time.time()
     hydro_options = {'N':options.N, 'Mtot':options.Mtot,\
                      'Rvir':options.Rvir, 't_end':options.t_end,\
                      'n_steps':options.n_steps,\
@@ -26,6 +27,42 @@ def main(options):
         create_N_vs_E()
 
     run_hydrodynamics(**hydro_options)
+    
+    end_time = time.time()
+    print "Total runtime:", end_time-start_time, "seconds."
+
+def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
+         t_end=0.5|units.day, n_steps=10, write_hdf5=None):
+    print "N:%i, Mtot:%s, Rvir:%s, t_end:%s, n_steps:%s"%(N, \
+           Mtot.as_string_in(units.MSun), \
+           Rvir.as_string_in(units.RSun), \
+           t_end.as_string_in(units.day), n_steps)
+
+    converter=nbody_system.nbody_to_si(Mtot, Rvir)
+    bodies = new_plummer_gas_model(N, convert_nbody=converter)
+
+    hydro = Fi(converter)
+    hydro.gas_particles.add_particles(bodies)
+#    hydro.parameters.isothermal_flag = True
+#    hydro.parameters.integrate_entropy_flag = False
+#    hydro.parameters.gamma = 1
+
+    if write_hdf5:
+       filename = write_hdf5
+       hydro_to_framework = hydro.gas_particles.new_channel_to(bodies)
+       write_set_to_file(bodies.savepoint(0.0 | t_end.unit),\
+                         filename, "hdf5")
+
+       timerange = numpy.linspace(0, t_end.value_in(units.day),\
+                                  n_steps) | units.day
+       for t in timerange:
+           hydro.evolve_model(t)
+           hydro_to_framework.copy()                
+           write_set_to_file(bodies.savepoint(t), filename, "hdf5")
+       hydro.stop()
+
+    #energy_error = 1.0-(Etot_end/Etot_init)
+    return 0 
 
 def create_N_vs_t(print_it=False, N_list=None):
     if N_list:
@@ -57,37 +94,6 @@ def create_N_vs_E(print_it=False, N_list=None):
         for elem in energy_errors:
             print "energy error:", elem[0],"nr_particles", elem[1]
 
-def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
-         t_end=0.5|units.day, n_steps=10, write_hdf5=False):
-    print "N:%i, Mtot:%s, Rvir:%s, t_end:%s, n_steps:%s"%(N, \
-           Mtot.as_string_in(units.MSun), \
-           Rvir.as_string_in(units.RSun), \
-           t_end.as_string_in(units.day), n_steps)
-
-    converter=nbody_system.nbody_to_si(Mtot, Rvir)
-    bodies = new_plummer_gas_model(N, convert_nbody=converter)
-
-    hydro = Fi(converter)
-    hydro.gas_particles.add_particles(bodies)
-#    hydro.parameters.isothermal_flag = True
-#    hydro.parameters.integrate_entropy_flag = False
-#    hydro.parameters.gamma = 1
-
-    if write_hdf5 == True:
-       hydro_to_framework = hydro.gas_particles.new_channel_to(bodies)
-       write_set_to_file(bodies.savepoint(0.0 | t_end.unit),\
-                         "hydro.hdf5", "hdf5")
-
-       timerange = numpy.linspace(0, t_end.value_in(units.day),\
-                                  n_steps) | units.day
-       for t in timerange:
-           hydro.evolve_model(t)
-           hydro_to_framework.copy()                
-           write_set_to_file(bodies.savepoint(t),"hydro.hdf5", "hdf5")
-       hydro.stop()
-
-    #energy_error = 1.0-(Etot_end/Etot_init)
-    return 0 
 
 def new_option_parser():
     from amuse.units.optparse import OptionParser
@@ -111,10 +117,11 @@ def new_option_parser():
     result.add_option("-E", dest="N_vs_E", action='store_true',\
                       default = False,\
                       help="Creates plot of N vs energy error.")
-    result.add_option("-H", dest="write_hdf5", action='store_true',\
-                      default = False,\
-                      help="Writes results to an hdf5 file.")
+    result.add_option("-H", dest="write_hdf5", action='store',\
+                      default = None,\
+                      help="Specifies filename for hdf5 output.")
     return result
+
 
 if __name__ in ('__main__', '__plot__'):
     options, arguments = new_option_parser().parse_args()
