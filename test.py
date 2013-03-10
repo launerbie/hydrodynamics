@@ -1,15 +1,8 @@
 #!/usr/bin/env python
-#This line is seventy-two characters loooooooooooooooooooooooooooooong.
+
 import time
-import numpy 
-
-from amuse.units import units
-from amuse.units import nbody_system
-from amuse.ic.gasplummer import new_plummer_gas_model
-from amuse.community.fi.interface import Fi
-from amuse.io.base import write_set_to_file
-
 import plotter
+from hydro import run_hydrodynamics
 
 def main(options):
     start_time = time.time()
@@ -33,46 +26,10 @@ def main(options):
     end_time = time.time()
     print "Total runtime:", end_time-start_time, "seconds."
 
-def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
-                      t_end=0.5|units.day, n_steps=10, write_hdf5=None):
-
-    converter = nbody_system.nbody_to_si(Mtot, Rvir)
-    bodies = new_plummer_gas_model(N, convert_nbody=converter)
-
-    hydro = Fi(converter)
-    hydro.gas_particles.add_particles(bodies)
-#    hydro.parameters.isothermal_flag = True
-#    hydro.parameters.integrate_entropy_flag = False
-#    hydro.parameters.gamma = 1
-
-    timerange = numpy.linspace(0, t_end.value_in(units.day),\
-                                  n_steps) | units.day
-
-    if write_hdf5:
-       filename = write_hdf5
-       hydro_to_framework = hydro.gas_particles.new_channel_to(bodies)
-       write_set_to_file(bodies.savepoint(0.0 | t_end.unit),\
-                         filename, "hdf5")
-       for t in timerange:
-           print "Evolving to t=%s"%t.as_string_in(t.unit)
-           hydro.evolve_model(t)
-           hydro_to_framework.copy()                
-           write_set_to_file(bodies.savepoint(t), filename, "hdf5")
-    else:
-       for t in timerange:
-           print "Evolving to t=%s"%t.as_string_in(t.unit)
-           hydro.evolve_model(t)
-
-    hydro.stop()
-
-    #energy_error = 1.0-(Etot_end/Etot_init)
-    return 0 
-
 def create_N_vs_t(print_it=False, N_list=None):
     if N_list:
         N = N_list
     else:
-        #N = [10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000] 
         N = [10, 50, 100, 500, 1000, 5000] 
     total_runtimes = []
     for nr_particles in N: 
@@ -98,9 +55,9 @@ def create_N_vs_E(print_it=False, N_list=None):
         for elem in energy_errors:
             print "energy error:", elem[0],"nr_particles", elem[1]
 
-
 def new_option_parser():
     from amuse.units.optparse import OptionParser
+    from amuse.units import units
     result = OptionParser()
     result.add_option("-N", dest="N", type="int", default = 1000,
                       help="number of stars [1000]")
@@ -126,8 +83,7 @@ def new_option_parser():
                       help="Specifies filename for hdf5 output.")
     return result
 
-
-if __name__ in ('__main__', '__plot__'):
+if __name__ in ('__main__'):
     options, arguments = new_option_parser().parse_args()
     main(options)
 
