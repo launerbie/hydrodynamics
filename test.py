@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#This line is seventy-two characters loooooooooooooooooooooooooooooong.
 import time
 import numpy 
 
@@ -16,6 +17,7 @@ def main(options):
                      'Rvir':options.Rvir, 't_end':options.t_end,\
                      'n_steps':options.n_steps,\
                      'write_hdf5':options.write_hdf5}
+    print hydro_options
 
     program_options = {'N_vs_t':options.N_vs_t,\
                        'N_vs_E':options.N_vs_E}
@@ -32,13 +34,9 @@ def main(options):
     print "Total runtime:", end_time-start_time, "seconds."
 
 def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
-         t_end=0.5|units.day, n_steps=10, write_hdf5=None):
-    print "N:%i, Mtot:%s, Rvir:%s, t_end:%s, n_steps:%s"%(N, \
-           Mtot.as_string_in(units.MSun), \
-           Rvir.as_string_in(units.RSun), \
-           t_end.as_string_in(units.day), n_steps)
+                      t_end=0.5|units.day, n_steps=10, write_hdf5=None):
 
-    converter=nbody_system.nbody_to_si(Mtot, Rvir)
+    converter = nbody_system.nbody_to_si(Mtot, Rvir)
     bodies = new_plummer_gas_model(N, convert_nbody=converter)
 
     hydro = Fi(converter)
@@ -47,19 +45,25 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
 #    hydro.parameters.integrate_entropy_flag = False
 #    hydro.parameters.gamma = 1
 
+    timerange = numpy.linspace(0, t_end.value_in(units.day),\
+                                  n_steps) | units.day
+
     if write_hdf5:
        filename = write_hdf5
        hydro_to_framework = hydro.gas_particles.new_channel_to(bodies)
        write_set_to_file(bodies.savepoint(0.0 | t_end.unit),\
                          filename, "hdf5")
-
-       timerange = numpy.linspace(0, t_end.value_in(units.day),\
-                                  n_steps) | units.day
        for t in timerange:
+           print "Evolving to t=%s"%t.as_string_in(t.unit)
            hydro.evolve_model(t)
            hydro_to_framework.copy()                
            write_set_to_file(bodies.savepoint(t), filename, "hdf5")
-       hydro.stop()
+    else:
+       for t in timerange:
+           print "Evolving to t=%s"%t.as_string_in(t.unit)
+           hydro.evolve_model(t)
+
+    hydro.stop()
 
     #energy_error = 1.0-(Etot_end/Etot_init)
     return 0 
