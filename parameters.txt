@@ -1,0 +1,826 @@
+>>> for line in dir(hydro.parameters):
+...     print '\n'+'parameters.'+line+":"
+...     print eval('hydro.parameters.'+line).__doc__
+... 
+
+parameters.__class__:
+Parameters: 
+epsilon_squared
+
+    smoothing parameter for gravity calculations (default value:0.0 m**2)
+
+timestep
+
+    timestep for system (default value:1591.96982961 s)
+
+radiation_flag
+
+    Radiation flag. True means: radiation (i.e. radiative cooling/heating) is included. False means: no radiation, and implies no star formation. (default value:False)
+
+star_formation_flag
+
+    Star-formation flag. True means: star formation is included. False means: no star formation included. (default value:False)
+
+use_hydro_flag
+
+    Hydrodynamics flag. True means: SPH hydro included, False means: gravity only. (default value:True)
+
+square_root_timestep_flag
+
+    Square-root-timestep flag. True means: use sqrt(eps/acc) timestep criterion. (default value:False)
+
+acc_timestep_flag
+
+    Acceleration-timestep flag. True means: use vref/acc timestep criterion. (default value:True)
+
+freeform_timestep_flag
+
+    Freeform-timestep flag. True means: use freeform (v/freev)**freevexp * (a/freea)**freeaexp timestep criterion. (default value:False)
+
+quadrupole_moments_flag
+
+    Quadrupole-moments flag. True means: calculate and use quadrupole cell moments. (default value:False)
+
+direct_sum_flag
+
+    Direct-summation flag. True means: direct N**2 gravity summation. (default value:False)
+
+self_gravity_flag
+
+    Self-gravity flag. False means: self-gravity is not used, only external potentials. (default value:True)
+
+fixed_halo_flag
+
+    Fixed-halo flag. True means: use fixed (spherical) potential. (default value:False)
+
+adaptive_smoothing_flag
+
+    Adaptive-smoothing flag. True means: use of adaptive gravity smoothing for all particles. (default value:False)
+
+gadget_cell_opening_flag
+
+    Gadget-cell-opening flag. True means: use of Gadget cell opening criterion. (default value:True)
+
+smooth_input_flag
+
+    Smooth-input flag. True means: smooth input SPH properties. (default value:False)
+
+conservative_sph_flag
+
+    Conservative-SPH flag. True means: use Springel & Hernquist conservative SPH form (currently the only option). (default value:True)
+
+sph_dens_init_flag
+
+    SPH-density-init flag. True means: initialize sph density and h_smooth (most probably useless for AMUSE interface). (default value:True)
+
+integrate_entropy_flag
+
+    Integrate-entropy flag. True means: integrate entropy, else: internal energy. (default value:True)
+
+isothermal_flag
+
+    Isothermal flag. True means: isothermal gas (requires integrate_entropy_flag == False). (default value:False)
+
+eps_is_h_flag
+
+    Eps-is-h flag. True means: set gas particles gravitational epsilon to h (SPH smoothing length). (default value:True)
+
+balsara_flag
+
+    balsara flag. True means: use Balsara viscosity limiter. (default value:False)
+
+first_snapshot
+
+    The number of the first snapshot. (default value:0)
+
+output_interval
+
+    The number of steps between output. (default value:5)
+
+log_interval
+
+    The number of steps between logs. (default value:5)
+
+maximum_time_bin
+
+    The maximum time bin (dtime*2**-max_tbin=minimum time step). (default value:4096)
+
+minimum_part_per_bin
+
+    The minimum number of particles per time bin. (default value:1)
+
+targetnn
+
+    The target number of neighbour particles for variable gravitational eps. (default value:32)
+
+verbosity
+
+    The level of terminal output (0=minimum). (default value:0)
+
+n_smooth
+
+    The target number of SPH neighbours. (default value:64)
+
+periodic_box_size
+
+    The size of simulation domain box (particles outside get deleted). (default value:6.955e+12 m)
+
+code_mass_unit
+
+    The code mass unit (in Msun, 10^9 standard). (default value:1.98892e+39 kg)
+
+code_length_unit
+
+    The code length unit (in kpc, 1 standard). (default value:3.08567758128e+19 m)
+
+sqrt_timestep_crit_constant
+
+    Square-root-timestep criterion constant (unitless,standard=1.). (default value:1.0)
+
+acc_timestep_crit_constant
+
+    Acceleration-timestep criterion constant (unitless,standard=0.25). (default value:0.25)
+
+free_timestep_crit_constant_v
+
+    Freeform-timestep criterion constant v. (default value:0.5)
+
+free_timestep_crit_constant_a
+
+    Freeform-timestep criterion constant a. (default value:0.35)
+
+free_timestep_crit_constant_vexp
+
+    Freeform-timestep criterion constant v_exp. (default value:0.0)
+
+free_timestep_crit_constant_aexp
+
+    Freeform-timestep criterion constant a_exp. (default value:-1.0)
+
+opening_angle
+
+    Opening angle, theta, for building the tree: between 0 and 1 (unitless, 0.5). (default value:0.5)
+
+gadget_cell_opening_constant
+
+    Gadget-cell-openings criterion parameter  (unitless, .01) (default value:0.01)
+
+nn_tol
+
+    The fractional tolerance in nn_target (0.1). (default value:0.1)
+
+gas_epsilon
+
+    The gas gravitational smoothing epsilon. (default value:3477500.0 m)
+
+gamma
+
+    gas polytropic index (1.6666667) (default value:1.6666667)
+
+artificial_viscosity_alpha
+
+    SPH artificial viscosity alpha parameter (0.5) (default value:0.5)
+
+beta
+
+    SPH artificial viscosity beta parameter (2*alpha=1.0) (default value:1.0)
+
+sph_artificial_viscosity_eps
+
+    SPH artificial viscosity safety against divergence (0.01) (default value:0.01)
+
+courant
+
+    SPH courant condition parameter (0.3) (default value:0.3)
+
+min_gas_part_mass
+
+    minimum gas particle mass (fraction of initial (average) mass) (default value:0.25)
+
+sph_h_const
+
+    SPH smoothing length if constant (default value:139100000.0 m)
+
+n_smooth_tol
+
+    fractional tolerance in number of SPH neighbours (default value:0.1)
+
+grain_heat_eff
+
+    FUV grain heating efficiency parameter (unitless, 0.05) (default value:0.05)
+
+zeta_cr_ion_rate
+
+    primary cosmic ray ionization rate, zeta (in units of 1.8e-17 sec^-1, 1.) (default value:6.48e-17 s**-1)
+
+heat_par1
+
+    additional heating 1 parameter (0.0) (default value:0.0)
+
+heat_par2
+
+    additional heating 2 parameter (0.0) (default value:0.0)
+
+cool_par
+
+    additional cooling parameter (1.0) (default value:1.0)
+
+optical_depth
+
+    1/(mean free path) for UV photons (code length **-1, 0.0) (default value:0.0)
+
+star_form_delay_fac
+
+    star formation delay parameter (unitless, 1) (default value:1.0)
+
+star_form_mass_crit
+
+    star formation cloud reference mass (Msun, 1.e5) (default value:1.98892e+35 kg)
+
+star_form_eff
+
+    gas particle mass fraction converted to stars (0.125) (default value:0.25)
+
+supernova_duration
+
+    Supernova activity time, (Myr, 3.e7) (default value:9.46707779808e+20 s)
+
+supernova_eff
+
+    Supernova feedback coupling efficiency, (0.0) (default value:0.0)
+
+t_supernova_start
+
+    Supernova feedback start time, (Myr, 3.e6) (default value:9.46707779808e+19 s)
+
+max_density
+
+    Maximum permissible density (code density units, 100) (default value:100.0)
+
+halofile
+
+    Path to initial halo model file, relative to the Fi data directory (none) (default value:none)
+
+feedback
+
+    feedback model (fuv, pres, kine, solo, solh) (default value:fuv)
+
+star_formation_mode
+
+    star formation model (gerritsen, nieuw) (default value:gerritsen)
+
+h_update_method
+
+    SPH smoothing length criterion (at the moment always 'mass') (default value:mass)
+
+sph_viscosity
+
+    SPH viscosity (sph,sphv, bulk). Note: not all may work. (default value:sph)
+
+fi_data_directory
+
+    Name of the Fi data directory (default value:)
+
+periodic_boundaries_flag
+
+    Periodic boundaries flag. True means: use periodic boundary conditions (read-only) (default value:False)
+
+begin_time
+
+    model time to start the simulation at (default value:0.0 s)
+
+stopping_conditions_timeout
+
+    max wallclock time available for the evolve step (default value:4.0 s)
+
+stopping_conditions_number_of_steps
+
+    max inner loop evals (default value:1.0)
+
+stopping_conditions_out_of_box_size
+
+    size of cube (default value:0.0 m)
+
+stopping_condition_minimum_density
+
+    minimum density of a gas particle (default value:-5911.88410853 m**-3 * kg)
+
+stopping_condition_maximum_density
+
+    maximum density of a gas particle (default value:-5911.88410853 m**-3 * kg)
+
+stopping_condition_minimum_internal_energy
+
+    minimum internal energy of a gas particle (default value:-190864255609.0 m**2 * s**-2)
+
+stopping_condition_maximum_internal_energy
+
+    maximum internal energy of a gas particle (default value:-190864255609.0 m**2 * s**-2)
+
+
+
+parameters.__delattr__:
+x.__delattr__('name') <==> del x.name
+
+parameters.__dict__:
+dict() -> new empty dictionary
+dict(mapping) -> new dictionary initialized from a mapping object's
+    (key, value) pairs
+dict(iterable) -> new dictionary initialized as if via:
+    d = {}
+    for k, v in iterable:
+        d[k] = v
+dict(**kwargs) -> new dictionary initialized with the name=value pairs
+    in the keyword argument list.  For example:  dict(one=1, two=2)
+
+parameters.__dir__:
+None
+
+parameters.__doc__:
+str(object) -> string
+
+Return a nice string representation of the object.
+If the argument is a string, the return value is the same object.
+
+parameters.__format__:
+default object formatter
+
+parameters.__getattr__:
+None
+
+parameters.__getattribute__:
+x.__getattribute__('name') <==> x.name
+
+parameters.__hash__:
+x.__hash__() <==> hash(x)
+
+parameters.__init__:
+None
+
+parameters.__metaclass__:
+<property object at 0x28e4e10>
+
+parameters.__module__:
+str(object) -> string
+
+Return a nice string representation of the object.
+If the argument is a string, the return value is the same object.
+
+parameters.__name__:
+str(object) -> string
+
+Return a nice string representation of the object.
+If the argument is a string, the return value is the same object.
+
+parameters.__new__:
+T.__new__(S, ...) -> a new object with type S, a subtype of T
+
+parameters.__reduce__:
+helper for pickle
+
+parameters.__reduce_ex__:
+helper for pickle
+
+parameters.__repr__:
+x.__repr__() <==> repr(x)
+
+parameters.__setattr__:
+None
+
+parameters.__sizeof__:
+__sizeof__() -> int
+size of object in memory, in bytes
+
+parameters.__str__:
+None
+
+parameters.__subclasshook__:
+Abstract classes can override this to customize issubclass().
+
+This is invoked early on by abc.ABCMeta.__subclasscheck__().
+It should return True, False or NotImplemented.  If it returns
+NotImplemented, the normal algorithm is used.  Otherwise, it
+overrides the normal algorithm (and the outcome is cached).
+
+
+parameters.__weakref__:
+None
+
+parameters._get_doc:
+None
+
+parameters.acc_timestep_crit_constant:
+None
+
+parameters.acc_timestep_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.adaptive_smoothing_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.artificial_viscosity_alpha:
+None
+
+parameters.balsara_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.begin_time:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.beta:
+None
+
+parameters.check_defaults:
+None
+
+parameters.code_length_unit:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.code_mass_unit:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.conservative_sph_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.cool_par:
+None
+
+parameters.copy:
+None
+
+parameters.courant:
+None
+
+parameters.direct_sum_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.eps_is_h_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.epsilon_squared:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.feedback:
+str(object) -> string
+
+Return a nice string representation of the object.
+If the argument is a string, the return value is the same object.
+
+parameters.fi_data_directory:
+str(object) -> string
+
+Return a nice string representation of the object.
+If the argument is a string, the return value is the same object.
+
+parameters.first_snapshot:
+None
+
+parameters.fixed_halo_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.free_timestep_crit_constant_a:
+None
+
+parameters.free_timestep_crit_constant_aexp:
+None
+
+parameters.free_timestep_crit_constant_v:
+None
+
+parameters.free_timestep_crit_constant_vexp:
+None
+
+parameters.freeform_timestep_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.gadget_cell_opening_constant:
+None
+
+parameters.gadget_cell_opening_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.gamma:
+None
+
+parameters.gas_epsilon:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.get_default_value_for:
+None
+
+parameters.get_parameter:
+None
+
+parameters.grain_heat_eff:
+None
+
+parameters.h_update_method:
+str(object) -> string
+
+Return a nice string representation of the object.
+If the argument is a string, the return value is the same object.
+
+parameters.halofile:
+str(object) -> string
+
+Return a nice string representation of the object.
+If the argument is a string, the return value is the same object.
+
+parameters.heat_par1:
+None
+
+parameters.heat_par2:
+None
+
+parameters.integrate_entropy_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.isothermal_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.iter_parameters:
+None
+
+parameters.log_interval:
+None
+
+parameters.max_density:
+None
+
+parameters.maximum_time_bin:
+None
+
+parameters.min_gas_part_mass:
+None
+
+parameters.minimum_part_per_bin:
+None
+
+parameters.n_smooth:
+None
+
+parameters.n_smooth_tol:
+None
+
+parameters.names:
+None
+
+parameters.nn_tol:
+None
+
+parameters.opening_angle:
+None
+
+parameters.optical_depth:
+None
+
+parameters.output_interval:
+None
+
+parameters.periodic_boundaries_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.periodic_box_size:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.quadrupole_moments_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.radiation_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.reset_from_memento:
+None
+
+parameters.self_gravity_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.send_cached_parameters_to_code:
+None
+
+parameters.send_not_set_parameters_to_code:
+None
+
+parameters.set_defaults:
+None
+
+parameters.smooth_input_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.sph_artificial_viscosity_eps:
+None
+
+parameters.sph_dens_init_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.sph_h_const:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.sph_viscosity:
+str(object) -> string
+
+Return a nice string representation of the object.
+If the argument is a string, the return value is the same object.
+
+parameters.sqrt_timestep_crit_constant:
+None
+
+parameters.square_root_timestep_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.star_form_delay_fac:
+None
+
+parameters.star_form_eff:
+None
+
+parameters.star_form_mass_crit:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.star_formation_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.star_formation_mode:
+str(object) -> string
+
+Return a nice string representation of the object.
+If the argument is a string, the return value is the same object.
+
+parameters.stopping_condition_maximum_density:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.stopping_condition_maximum_internal_energy:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.stopping_condition_minimum_density:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.stopping_condition_minimum_internal_energy:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.stopping_conditions_number_of_steps:
+None
+
+parameters.stopping_conditions_out_of_box_size:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.stopping_conditions_timeout:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.supernova_duration:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.supernova_eff:
+None
+
+parameters.t_supernova_start:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.targetnn:
+None
+
+parameters.timestep:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+    
+
+parameters.use_hydro_flag:
+bool(x) -> bool
+
+Returns True when the argument x is true, False otherwise.
+The builtins True and False are the only two instances of the class bool.
+The class bool is a subclass of the class int, and cannot be subclassed.
+
+parameters.verbosity:
+None
+
+parameters.zeta_cr_ion_rate:
+
+    A ScalarQuantity object represents a physical scalar
+    quantity.
+
