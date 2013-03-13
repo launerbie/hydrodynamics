@@ -13,7 +13,7 @@ from amuse.ic.gasplummer import new_plummer_gas_model
 from amuse.ext.radial_profile import radial_density
 from amuse.community.fi.interface import Fi
 
-from samples import init_conditions
+#from samples import init_conditions
 
 #q=VectorQuantity.new_from_scalar_quantities(*b)
 
@@ -25,6 +25,7 @@ class HydroResults(object):
         self.total_energy = results['total_energy']
         self.radial_profile = "think of something"
         self.lagrangianradii = results['lagrangianradii']
+        self.mass_fractions = results['mass_fractions']
 
     def write_to_hdf5(self, filename):
         """ Write all of the above to hdf5 file."""
@@ -46,11 +47,17 @@ class HydroResults(object):
                                     self.total_energy.unit)
         f['total_energy'].attrs['unit'] = 'someunit_energy'
 
-        for i, radius in enumerate(self.lagrangianradii[0][1]):
-            key ='lagrangianradii'+"_"+str(radius)
-            print "key:",key 
-            f[key] = self.lagrangianradii
-            f[key].attrs['unit'] = 'meter'
+        f['lagrangianradii'] = self.lagrangianradii.value_in(\
+                                    self.lagrangianradii.unit)
+        f['lagrangianradii'].attrs['unit'] = 'meter'
+        f['lagrangianradii'].attrs['mf'] = self.mass_fractions 
+        
+        #for i, radius in enumerate(self.lagrangianradii[0][1]):
+        #    key ='lagrangianradii'+"_"+str(radius)
+        #    print "key:",key 
+        #    f[key] = self.lagrangianradii
+        #    f[key].attrs['unit'] = 'meter'
+
         f.close()
         del f
 
@@ -58,13 +65,13 @@ class HydroResults(object):
         """ Read all of the above from file. """
         pass
 
-class LagrangianRadii(object):
-      def __init__(self, list_):
-          radii = list_[0][0]
-          lr = [elem[0] for elem in list_]
-          for i, radius in radii:
-              pass
-          pass
+    #def unwrap_lagrangianradii(self, lr):
+    #    lr_in_list = [elem[0] for elem in lr]
+    #    lr_vq = VectorQuantity.new_from_scalar_quantities(*lr_in_list) 
+    #    mass_fractions = lr[0][1]
+    #    print "lr_vq", lr_vq, type(lr_vq)
+    #    return lr_vq, mass_fractions
+        
 
 def main(options):
     start_time = time.time()
@@ -102,7 +109,8 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
     fi.parameters.integrate_entropy_flag = False
     #fi.parameters.gamma = 1
 
-    data = {'lagrangianradii':[],\
+    data = {'lagrangianradii':AdaptingVectorQuantity(),\
+            'mass_fractions':[0.10, 0.25, 0.50, 0.75],\
             'angular_momentum':AdaptingVectorQuantity(),\
             'radial_profile_initial':AdaptingVectorQuantity(),\
             'radial_profile_final':AdaptingVectorQuantity(),\
@@ -112,8 +120,6 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
 
     data['radial_profile_initial'].append(1|units.m)
     data['radial_profile_final'].append(1|units.m)
-
-    mass_fraction = [0.10, 0.25, 0.50, 0.75]
 
     timerange = numpy.linspace(0, t_end.value_in(t_end.unit),\
                                   n_steps) | t_end.unit
@@ -139,12 +145,12 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
                                            total_angular_momentum())
            data['lagrangianradii'].append(fi.particles.LagrangianRadii(\
                                           unit_converter=converter,\
-                                          mf=mass_fraction))
+                                          mf=data['mass_fractions'])[0])
            
     fi.stop()
     #energy_error = 1.0-(Etot_end/Etot_init)
     results=data
-    return results, HydroResults(data)
+    return results, HydroResults(data, mass_fractions)
 
 def create_N_vs_t(print_it=False, N_list=None):
     if N_list:
