@@ -13,67 +13,10 @@ from amuse.ic.gasplummer import new_plummer_gas_model
 from amuse.ext.radial_profile import radial_density
 from amuse.community.fi.interface import Fi
 
-#from samples import init_conditions
-
-#q=VectorQuantity.new_from_scalar_quantities(*b)
-
-class HydroResults(object):
-    def __init__(self, results):
-        self.angular_momentum = results['angular_momentum']
-        self.potential_energy= results['potential_energy']
-        self.kinetic_energy = results['kinetic_energy'] 
-        self.total_energy = results['total_energy']
-        self.radial_profile = "think of something"
-        self.lagrangianradii = results['lagrangianradii']
-        self.mass_fractions = results['mass_fractions']
-
-    def write_to_hdf5(self, filename):
-        """ Write all of the above to hdf5 file."""
-        f = h5py.File(filename,'w')
-
-        f['angular_momentum'] = self.angular_momentum.value_in(\
-                                    self.angular_momentum.unit)
-        f['angular_momentum'].attrs['unit'] = 'someunit'
-
-        f['potential_energy'] = self.potential_energy.value_in(\
-                                    self.potential_energy.unit)
-        f['potential_energy'].attrs['unit'] = 'someunit_energy'
-
-        f['kinetic_energy'] = self.kinetic_energy.value_in(\
-                                    self.kinetic_energy.unit)
-        f['kinetic_energy'].attrs['unit'] = 'someunit_energy'
-
-        f['total_energy'] = self.total_energy.value_in(\
-                                    self.total_energy.unit)
-        f['total_energy'].attrs['unit'] = 'someunit_energy'
-
-        f['lagrangianradii'] = self.lagrangianradii.value_in(\
-                                    self.lagrangianradii.unit)
-        f['lagrangianradii'].attrs['unit'] = 'meter'
-        f['lagrangianradii'].attrs['mf'] = self.mass_fractions 
-        
-        #for i, radius in enumerate(self.lagrangianradii[0][1]):
-        #    key ='lagrangianradii'+"_"+str(radius)
-        #    print "key:",key 
-        #    f[key] = self.lagrangianradii
-        #    f[key].attrs['unit'] = 'meter'
-
-        f.close()
-        del f
-
-    def read_from_hdf5(self, filename):
-        """ Read all of the above from file. """
-        pass
-
-    #def unwrap_lagrangianradii(self, lr):
-    #    lr_in_list = [elem[0] for elem in lr]
-    #    lr_vq = VectorQuantity.new_from_scalar_quantities(*lr_in_list) 
-    #    mass_fractions = lr[0][1]
-    #    print "lr_vq", lr_vq, type(lr_vq)
-    #    return lr_vq, mass_fractions
-        
 
 def main(options):
+    """ Separates the arguments for the hydro_solver from the
+    program control-flow arguments. Runs stuff."""
     start_time = time.time()
     hydro_options = {'N':options.N, 'Mtot':options.Mtot,\
                      'Rvir':options.Rvir, 't_end':options.t_end,\
@@ -86,12 +29,12 @@ def main(options):
     if options.N_vs_E == True:
         create_N_vs_E()
 
-    data, r = run_hydrodynamics(**hydro_options)
+    results = run_hydrodynamics(**hydro_options)
     
     end_time = time.time()
     print "Total runtime:", end_time-start_time, "seconds."
     
-    r.write_to_hdf5(options.results_out)
+    results.write_to_hdf5(options.results_out)
 
     return 0
 
@@ -118,8 +61,8 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
             'potential_energy':AdaptingVectorQuantity(),\
             'total_energy':AdaptingVectorQuantity() } 
 
-    data['radial_profile_initial'].append(1|units.m)
-    data['radial_profile_final'].append(1|units.m)
+    data['radial_profile_initial'].append(1|units.m) # placeholder
+    data['radial_profile_final'].append(1|units.m) # placeholder
 
     timerange = numpy.linspace(0, t_end.value_in(t_end.unit),\
                                   n_steps) | t_end.unit
@@ -149,8 +92,7 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
            
     fi.stop()
     #energy_error = 1.0-(Etot_end/Etot_init)
-    results=data
-    return results, HydroResults(data, mass_fractions)
+    return data 
 
 def create_N_vs_t(print_it=False, N_list=None):
     if N_list:
@@ -166,7 +108,7 @@ def create_N_vs_t(print_it=False, N_list=None):
     if print_it == True:
         for elem in total_runtimes:
             print "runtime:", elem[0],"nr_particles", elem[1]
-    #writeto_hdf5file
+    #writeto_hdf5file? or just plot and leave?
 
 def create_N_vs_E(print_it=False, N_list=None):
     if N_list:
@@ -181,7 +123,7 @@ def create_N_vs_E(print_it=False, N_list=None):
     if print_it == True:
         for elem in energy_errors:
             print "energy error:", elem[0],"nr_particles", elem[1]
-    #writeto_hdf5file
+    #writeto_hdf5file? or just plot and leave?
 
 def new_option_parser():
     from amuse.units.optparse import OptionParser
@@ -233,3 +175,62 @@ if __name__ in ('__main__'):
 #           print type(fi.total_energy)
 #           print type(fi.particles.LagrangianRadii(unit_converter=converter,\
 #                     mf=[0.10, 0.25, 0.50, 0.75]))
+
+
+
+#from samples import init_conditions
+
+#q=VectorQuantity.new_from_scalar_quantities(*b)
+'''
+class HydroResults(object):
+    def __init__(self, results):
+        self.angular_momentum = results['angular_momentum']
+        self.potential_energy= results['potential_energy']
+        self.kinetic_energy = results['kinetic_energy'] 
+        self.total_energy = results['total_energy']
+        self.radial_profile = "think of something"
+        self.lagrangianradii = results['lagrangianradii']
+        self.mass_fractions = results['mass_fractions']
+
+    def write_to_hdf5(self, filename):
+        """ Write all of the above to hdf5 file."""
+        f = h5py.File(filename,'w')
+
+        f['angular_momentum'] = self.angular_momentum.value_in(\
+                                    self.angular_momentum.unit)
+        f['angular_momentum'].attrs['unit'] = 'someunit'
+
+        f['potential_energy'] = self.potential_energy.value_in(\
+                                    self.potential_energy.unit)
+        f['potential_energy'].attrs['unit'] = 'someunit_energy'
+
+        f['kinetic_energy'] = self.kinetic_energy.value_in(\
+                                    self.kinetic_energy.unit)
+        f['kinetic_energy'].attrs['unit'] = 'someunit_energy'
+
+        f['total_energy'] = self.total_energy.value_in(\
+                                    self.total_energy.unit)
+        f['total_energy'].attrs['unit'] = 'someunit_energy'
+
+        f['lagrangianradii'] = self.lagrangianradii.value_in(\
+                                    self.lagrangianradii.unit)
+        f['lagrangianradii'].attrs['unit'] = 'meter'
+        f['lagrangianradii'].attrs['mf'] = self.mass_fractions 
+        f.close()
+        del f
+
+    def read_from_hdf5(self, filename):
+        """ Read all of the above from file. """
+        pass
+'''
+
+
+
+
+
+
+
+
+
+
+
