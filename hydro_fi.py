@@ -50,9 +50,10 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
     fi.gas_particles.add_particles(bodies)
 
     #Adiabetic equation of state means the following:
-    fi.parameters.isothermal_flag = True
-    fi.parameters.integrate_entropy_flag = False
-    fi.parameters.gamma = 1
+    fi.parameters.self_gravity_flag = True
+    #fi.parameters.isothermal_flag = True
+    #fi.parameters.integrate_entropy_flag = False
+    #fi.parameters.gamma = 1
 
     data = {'lagrangianradii':AdaptingVectorQuantity(),\
             'angular_momentum':AdaptingVectorQuantity(),\
