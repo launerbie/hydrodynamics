@@ -1,37 +1,55 @@
 #!/usr/bin/env python
+import sys
 from amuse.lab import *
 from support import read_from_hdf5 as read
 import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib.animation as animation
 import matplotlib as mpl 
+import numpy as np
+from optparse import OptionParser
 
-def main():
-    fig = plt.figure()
-    ax = plt.axes(xlim=(-0.5e10, 0.5e10), ylim=(-0.5e10, 0.5e10))
-    #ax = plt.axes(xlim=(-1.5,1.5), ylim=(-1.5,1.5))
-    line, = ax.plot([], [], **yellowdots)
+def main(options):
+    """ Creates images of the particle positions at each timestep."""
+    results = read(options.hdf5file)
+    x = results.positions.x.value_in(units.RSun)
+    y = results.positions.y.value_in(units.RSun)
+    
+    totalsteps = len(x)
+    nr_particles = len(x[0])
+    times = results.time
+    end_time = times[-1].value_in(units.day)
 
-    def genex():
-        results = read('N1000n1000.hdf5')
-        x = results.positions.x.value_in(units.m)
-        y = results.positions.y.value_in(units.m)
-        i=0
-        length = len(x)
-        while i < length:
-            yield (x[i], y[i])
-            i +=1
+    for i in range(totalsteps):
+        print i
+        fig = plt.figure(figsize=(8,8), dpi=300)
+        ax1 = fig.add_subplot(111)
 
-    def init():
-        line.set_data([], [])
-        return line,
+        ax1.plot(x[i],y[i], **yellowdots)
+        ax1.set_title("Particles:%i,  Steps:%i,  End-time:%f days,  t:%f days"%(nr_particles, totalsteps,\
+                           end_time, times[i].value_in(units.day)))
+        ax1.set_xlim(-2.0, 2.0)
+        ax1.set_ylim(-2.0, 2.0)
+        ax1.set_xlabel('RSun')
+        ax1.set_ylabel('RSun')
+        
+        zerostring = zeroes(i)
+        plt.savefig("images/"+zerostring+str(i)+".png", dpi=120)
+        fig.clf()
+        plt.close()
 
-    def animate(i):
-        line.set_data(i)
-        return line,
+    return 0
 
-    anim = animation.FuncAnimation(fig, animate, init_func=init, frames=genex, interval=1, blit=True)
-    plt.show()
+def zeroes(framenr):
+    """ Checks how many zeroes need to be added. You don't want 1.jpg 
+    but 0001.jpg """
+    zeroes=0
+    if framenr/1000 == 0:
+        zeroes += 1
+        if framenr/100 == 0:
+            zeroes += 1
+            if framenr/10 == 0:
+                zeroes += 1
+    zerostring = zeroes*"0"
+    return zerostring
 
 def rundark():
     mpl.rc('lines', linewidth=1, color='w')
@@ -61,12 +79,25 @@ def runbright():
     mpl.rc('figure', facecolor='w', edgecolor='w')
     mpl.rc('savefig', facecolor='w', edgecolor='w')
 
-if __name__:
+def parse_sysargs(sysargs):
+    """ OptionParser. """
+    parser = OptionParser()
+    parser.set_defaults(test=False, skip_table=False)
+
+    parser.add_option("-f", "--file", action="store",\
+                      dest="hdf5file", default=None,\
+                      help="HDF5 file to open")
+
+    options, args = parser.parse_args(sysargs[1:])
+    return options
+
+
+if __name__ in ('__main__'):
     dark=True
     redline     = dict(c='r', ls="-", lw=1, alpha=1.0)
     yellowline  = dict(c='y', ls="-", lw=1, alpha=1.0)
     blueline    = dict(c='b', ls="-", lw=1, alpha=1.0)
-    yellowdots  = dict(c='y', ls="o", mfc="y", mec="y", \
+    yellowdots  = dict(c='y', ls="o", mfc="y", mec="r", \
                   marker='o', alpha=1.0, ms=2)
     reddots     = dict(c='r', ls="o", mfc="r", mec="r", \
                   marker='o', alpha=1.0, ms=1)
@@ -90,4 +121,8 @@ if __name__:
         dots = dict(c='k', ls="o", mfc="k", mec="k", \
                       marker='o', alpha=1.0, ms=1)
         errdots = dict(fmt='o', ls="o", ecolor='r', alpha=1.0)
-    main()
+
+
+    options = parse_sysargs(sys.argv)
+    main(options)
+

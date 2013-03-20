@@ -38,7 +38,7 @@ class HDF5Ready(object):
 
         self.attributes = {}
         try:
-            self.attributes['unit'] = vq.unit.to_simple_form().__str__()
+            self.attributes['unit'] = vq.unit.to_reduced_form().__str__()
         except AttributeError:
             pass
         try:

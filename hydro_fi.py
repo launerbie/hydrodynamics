@@ -49,14 +49,11 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
     fi = Fi(converter)
     fi.gas_particles.add_particles(bodies)
 
-    #Adiabetic equation of state means the following:
     fi.parameters.self_gravity_flag = True
-    #fi.parameters.isothermal_flag = True
-    #fi.parameters.integrate_entropy_flag = False
-    #fi.parameters.gamma = 1
 
     data = {'lagrangianradii':AdaptingVectorQuantity(),\
             'angular_momentum':AdaptingVectorQuantity(),\
+            'time':AdaptingVectorQuantity(),\
             'positions':AdaptingVectorQuantity(),\
             'kinetic_energy':AdaptingVectorQuantity(),\
             'potential_energy':AdaptingVectorQuantity(),\
@@ -75,6 +72,7 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
 
     timerange = numpy.linspace(0, t_end.value_in(t_end.unit),\
                                   n_steps) | t_end.unit
+    data['time'].extend(timerange)
 
     if write_hdf5:
        filename = write_hdf5
@@ -123,7 +121,7 @@ def create_N_vs_t(filename, N_list=None):
     if N_list:
         N = N_list
     else:
-        N = [10, 50, 100, 500, 1000, 5000] 
+        N = [10, 50, 100, 500, 1000, 5000, 10000] 
     total_runtimes = []
     for nr_particles in N: 
         start_time = time.time()
@@ -201,3 +199,6 @@ if __name__ in ('__main__'):
     options, arguments = new_option_parser().parse_args()
     main(options)
 
+    #fi.parameters.isothermal_flag = True
+    #fi.parameters.integrate_entropy_flag = False
+    #fi.parameters.gamma = 1
