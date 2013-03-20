@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 #This line is 72 characters loooooooooooooooooooooooooooooooooooooooong.
-import h5py
+
 import time
 import numpy
-import plotter
+from support import HydroResults, write_to_hdf5
 
 from amuse.units import units
 from amuse.units import nbody_system
@@ -14,63 +14,6 @@ from amuse.ic.gasplummer import new_plummer_gas_model
 from amuse.ext.radial_profile import radial_density
 from amuse.community.fi.interface import Fi
 
-class HydroResults(object):
-    """ Container for the results of the hydrodynamics simulation. 
-    Instantiate a HydroResult class by passing it a dictionary of
-    VectorQuantities.
- 
-    Example usage:
-    >>> from amuse.lab import *
-    >>> from hydro_fi import HydroResults
-    >>> from hydro_fi import HDF5Ready
-
-    >>> data = dict(masses=[1,2,3]|units.kg, positions=[1,2,3]|units.m)
-    >>> results = HydroResults(data)
-    >>> results.masses
-    quantity<[1, 2, 3] kg>
-    >>> results.positions
-    quantity<[1, 2, 3] m>
-    >>> results.write_to_hdf5('testdata.hdf5')
-
-    """
-
-    def __init__(self, keywords):
-        """ Generates the attributes of HydroResults using the keywords 
-        of the dictionary as attribute names."""
-        self.__dict__.update(keywords)
-
-    def write_to_hdf5(self, filename):
-        """ Writes the attibutes of HydroResults to an hdf5 file."""
-        f = h5py.File(filename,'w')
-
-        for keyword in self.__dict__:
-            hdf5ready = HDF5Ready(self.__dict__[keyword], keyword)
-            f[keyword] = hdf5ready.nparray 
-
-            for name in hdf5ready.attributes:
-                f[keyword].attrs[name] = hdf5ready.attributes[name]
-        f.close()
-        del f
-
-class HDF5Ready(object):
-    """ Wraps VectorQuantities such that they can be written by
-    write_hdf5(). Basically needed to add information as attributes to
-    the hdf5 files. It contains information such as the unit of the
-    VectorQuantity."""
-    def __init__(self, vq, keyword):
-        self.keyword = keyword
-        self.nparray = vq.value_in(vq.unit) 
-
-        self.attributes = {} 
-        try:
-            self.attributes['unit'] = vq.unit.__str__() 
-        except AttributeError:
-            pass
-        try:
-            self.attributes['mass_fractions'] = vq.mf.__str__() 
-        except AttributeError:
-            pass
-
 def main(options):
     """ Separates the arguments for the hydro_solver from the
     program control-flow arguments. Runs stuff."""
@@ -80,25 +23,25 @@ def main(options):
                      'n_steps':options.n_steps,\
                      'write_hdf5':options.write_hdf5}
 
-    if options.N_vs_t == True:
-        create_N_vs_t()
+    if options.N_vs_t:
+        create_N_vs_t(options.N_vs_t)
 
-    if options.N_vs_E == True:
-        create_N_vs_E()
+    if options.N_vs_E:
+        create_N_vs_E(options.N_vs_E)
 
     results = run_hydrodynamics(**hydro_options)
     
     end_time = time.time()
     print "Total runtime:", end_time-start_time, "seconds."
     
-    results.write_to_hdf5(options.results_out)
-
+    if options.results_out:
+        write_to_hdf5(options.results_out, results.__dict__)
     return 0
 
 def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
                       t_end=0.5|units.day, n_steps=10, write_hdf5=None):
     """Runs the hydrodynamics simulation and returns a HydroResults
-    instance."""
+    instance. """
 
     converter = nbody_system.nbody_to_si(Mtot, Rvir)
     bodies = new_plummer_gas_model(N, convert_nbody=converter)
@@ -106,22 +49,28 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
     fi = Fi(converter)
     fi.gas_particles.add_particles(bodies)
 
-    #Adiabetic equation of state means the following?:
+    #Adiabetic equation of state means the following:
     fi.parameters.isothermal_flag = True
     fi.parameters.integrate_entropy_flag = False
-    #fi.parameters.gamma = 1
+    fi.parameters.gamma = 1
 
     data = {'lagrangianradii':AdaptingVectorQuantity(),\
             'angular_momentum':AdaptingVectorQuantity(),\
-            'radial_profile_initial':AdaptingVectorQuantity(),\
-            'radial_profile_final':AdaptingVectorQuantity(),\
+            'positions':AdaptingVectorQuantity(),\
             'kinetic_energy':AdaptingVectorQuantity(),\
             'potential_energy':AdaptingVectorQuantity(),\
             'total_energy':AdaptingVectorQuantity() } 
 
-    data['radial_profile_initial'].append(1|units.m) # placeholder
-    data['radial_profile_final'].append(1|units.m) # placeholder
     mass_fractions = [0.10, 0.25, 0.50, 0.75]
+
+    radius_init, densities_init = radial_density(fi.particles.x, \
+                                      fi.particles.mass, N=10, dim=1)
+
+    radius_init = VectorQuantity.new_from_scalar_quantities(*radius_init)
+    densities_init = VectorQuantity.new_from_scalar_quantities(*densities_init)
+    
+    data['radius_initial'] = radius_init 
+    data['densities_initial'] = densities_init 
 
     timerange = numpy.linspace(0, t_end.value_in(t_end.unit),\
                                   n_steps) | t_end.unit
@@ -143,19 +92,30 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
            data['kinetic_energy'].append(fi.kinetic_energy)
            data['potential_energy'].append(fi.potential_energy)
            data['total_energy'].append(fi.total_energy)
+           data['positions'].append(fi.particles.position)
            data['angular_momentum'].append(fi.gas_particles.\
                                            total_angular_momentum())
            data['lagrangianradii'].append(fi.particles.LagrangianRadii(\
                                           unit_converter=converter,\
                                           mf=mass_fractions)[0])
            
-    fi.stop()
-    #energy_error = 1.0-(Etot_end/Etot_init)
     setattr(data['lagrangianradii'], 'mf', mass_fractions)
+
+    radius_end, densities_end = radial_density(fi.particles.x, \
+                                      fi.particles.mass, N=10, dim=1)
+
+    radius_end = VectorQuantity.new_from_scalar_quantities(*radius_end)
+    densities_end = VectorQuantity.new_from_scalar_quantities(*densities_end)
+    
+    data['radius_final'] = radius_end 
+    data['densities_final'] = densities_end 
+
+    fi.stop()
+
     results = HydroResults(data)
     return results 
 
-def create_N_vs_t(print_it=False, N_list=None):
+def create_N_vs_t(filename, N_list=None):
     """ Iteratively runs run_hydrodynamics for several N in order to 
     create the data for the N vs. wallclock-time plot. Writes data to 
     hdf5 file."""
@@ -172,9 +132,15 @@ def create_N_vs_t(print_it=False, N_list=None):
     if print_it == True:
         for elem in total_runtimes:
             print "runtime:", elem[0],"nr_particles", elem[1]
-    #writeto_hdf5file? or just plot and leave?
 
-def create_N_vs_E(print_it=False, N_list=None):
+    N_as_vq = N | units.no_unit 
+    total_runtimes_as_vq = total_runtimes | units.s
+
+    data = {'N':N_as_vq, 'runtimes':total_runtimes_as_vq}
+    results = HydroResults(data)
+    results.writeto_hdf5file(filename)
+
+def create_N_vs_E(filename, N_list=None):
     """ Iteratively runs run_hydrodynamics for several N in order to 
     create the data for the N vs. Energy error plot. Writes data to hdf5
     file."""
@@ -190,7 +156,13 @@ def create_N_vs_E(print_it=False, N_list=None):
     if print_it == True:
         for elem in energy_errors:
             print "energy error:", elem[0],"nr_particles", elem[1]
-    #writeto_hdf5file? or just plot and leave?
+
+    N_as_vq = N | units.no_unit 
+    energy_errors_as_vq = energy_errors | units.s
+
+    data = {'N':N_as_vq, 'energyerror':energy_errors_as_vq}
+    results = HydroResults(data)
+    results.writeto_hdf5file(filename)
 
 def new_option_parser():
     from amuse.units.optparse import OptionParser
@@ -210,13 +182,13 @@ def new_option_parser():
     result.add_option("-R", unit=units.RSun,
                       dest="Rvir", type="float", default = 1|units.RSun,
                       help="Radius of cloud [%default]")
-    result.add_option("-T", dest="N_vs_t", action='store_true',\
-                      default = False,\
+    result.add_option("-T", dest="N_vs_t", action='store',\
+                      default = None,\
                       help="Create plot of one-step time vs N.")
-    result.add_option("-E", dest="N_vs_E", action='store_true',\
-                      default = False,\
+    result.add_option("-E", dest="N_vs_E", action='store',\
+                      default = None,\
                       help="Create plot of N vs energy error.")
-    result.add_option("-H", dest="write_hdf5", action='store',\
+    result.add_option("-H", dest="write_hdf5", type="string", action='store',\
                       default = None,\
                       help="Filename for hdf5 output.")
     result.add_option("-P", dest="results_out", action='store',\
@@ -228,14 +200,3 @@ if __name__ in ('__main__'):
     options, arguments = new_option_parser().parse_args()
     main(options)
 
-#    Etot_init = hydro.kinetic_energy + hydro.potential_energy + \
-#                hydro.thermal_energy
-
-#    Etot_end = hydro.kinetic_energy + hydro.potential_energy + \
-#            hydro.thermal_energy
-#        print "T=", hydro.get_time(), "M=", hydro.gas_particles.mass.sum(),
-#        print "E= ", Etot, "Q= ", (Ekin+Eth)/Epot, "dE=", (Etot_init-Etot)/Etot
-
-
-#from example import conditions
-#q=VectorQuantity.new_from_scalar_quantities(*b)

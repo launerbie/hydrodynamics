@@ -1,8 +1,23 @@
 #!/usr/bin/env python
+import sys
+import h5py
+
+from optparse import OptionParser
 
 from amuse.units import units
+
 from matplotlib import pyplot as plt
 import matplotlib as mpl
+
+from support import read_from_hdf5
+
+def main(options):
+    filename = options.hdf5file
+    results = read_from_hdf5(filename)
+    return 0 
+
+def plot_Ndependence(results):
+    pass
 
 def plot_steptimes(steptimes):
     fig = plt.figure()
@@ -27,7 +42,6 @@ def plot_energy(energy, energy_error, value_in="units.J"):
     ax2.set_xlabel('N')
     ax2.set_ylabel('energy_error')
     plt.show()
-
 
 def rundark():
     mpl.rc('lines', linewidth=1, color='w')
@@ -86,3 +100,28 @@ if __name__ == "plotter":
         dots = dict(c='k', ls="o", mfc="k", mec="k", \
                       marker='o', alpha=1.0, ms=1)
         errdots = dict(fmt='o', ls="o", ecolor='r', alpha=1.0)
+
+def parse_sysargs(sysargs):
+    """ Yeah, it's an OptionParser. """
+    parser = OptionParser()
+    parser.set_defaults(test=False, skip_table=False)
+
+
+    parser.add_option("-f", "--file", action="store",\
+                      dest="hdf5file", default=None,\
+                      help="HDF5 file to open")
+
+    parser.add_option("-e", "--energy", action="store_true",\
+                      dest="plot_NvsE", default=False,\
+                      help="help txt")
+
+    parser.add_option("-t", "--times", action="store_true", \
+                      dest="plot_NvsT", default=False,\
+                      help="help txt")
+
+    options, args = parser.parse_args(sysargs[1:])
+    return options
+
+if __name__ in ('__main__'):
+    options = parse_sysargs(sys.argv) 
+    main(options)
