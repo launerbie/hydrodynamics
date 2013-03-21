@@ -26,8 +26,8 @@ def main(options):
         ax1.plot(x[i],y[i], **yellowdots)
         ax1.set_title("Particles:%i,  Steps:%i,  End-time:%f days,  t:%f days"%(nr_particles, totalsteps,\
                            end_time, times[i].value_in(units.day)))
-        ax1.set_xlim(-2.0, 2.0)
-        ax1.set_ylim(-2.0, 2.0)
+        ax1.set_xlim(-8.0, 8.0)
+        ax1.set_ylim(-8.0, 8.0)
         ax1.set_xlabel('RSun')
         ax1.set_ylabel('RSun')
         
