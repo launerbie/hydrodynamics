@@ -18,6 +18,9 @@ def main(options):
     return 0 
 
 def plot_all(results):
+    n_steps = len(results.time)
+    N = len(results.positions.x[0])
+
     lr1 = results.lagrangianradii[:,0]
     lr2 = results.lagrangianradii[:,1]
     lr3 = results.lagrangianradii[:,2]
@@ -77,6 +80,7 @@ def plot_all(results):
     ax4.set_ylabel('Density in %s'%densities_initial.unit.__str__())
     ax4.set_xlim(-2,3)
     ax4.legend(loc='best')
+    plt.suptitle('Particles: %i  Steps: %i'%(N, n_steps))
     plt.show()
     pass
 
@@ -92,30 +96,30 @@ def plot_all(results):
 #    
 #    fig
 #    pass
-
-def plot_steptimes(steptimes):
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)
-    
-    ax1.plot(range(len(steptimes)), steptimes, **yellowline)
-    ax1.set_xlabel('N')
-    ax1.set_ylabel('step time [in seconds]')
-    plt.show()
-
-def plot_energy(energy, energy_error, value_in="units.J"):
-    energy = eval("energy.value_in("+value_in+")")
-    fig = plt.figure()
-    ax1 = fig.add_subplot(211)
-    ax2 = fig.add_subplot(212)
-
-    ax1.plot(range(len(energy)), energy, **yellowline)
-    ax1.set_xlabel('N')
-    ax1.set_ylabel('energy [%s]'%value_in)
-
-    ax2.plot(range(len(energy)), energy_error, **yellowline)
-    ax2.set_xlabel('N')
-    ax2.set_ylabel('energy_error')
-    plt.show()
+#
+#def plot_steptimes(steptimes):
+#    fig = plt.figure()
+#    ax1 = fig.add_subplot(111)
+#    
+#    ax1.plot(range(len(steptimes)), steptimes, **yellowline)
+#    ax1.set_xlabel('N')
+#    ax1.set_ylabel('step time [in seconds]')
+#    plt.show()
+#
+#def plot_energy(energy, energy_error, value_in="units.J"):
+#    energy = eval("energy.value_in("+value_in+")")
+#    fig = plt.figure()
+#    ax1 = fig.add_subplot(211)
+#    ax2 = fig.add_subplot(212)
+#
+#    ax1.plot(range(len(energy)), energy, **yellowline)
+#    ax1.set_xlabel('N')
+#    ax1.set_ylabel('energy [%s]'%value_in)
+#
+#    ax2.plot(range(len(energy)), energy_error, **yellowline)
+#    ax2.set_xlabel('N')
+#    ax2.set_ylabel('energy_error')
+#    plt.show()
 
 def rundark():
     mpl.rc('lines', linewidth=1, color='w')
@@ -144,7 +148,6 @@ def runbright():
     mpl.rc('grid', color='k')
     mpl.rc('figure', facecolor='w', edgecolor='w')
     mpl.rc('savefig', facecolor='w', edgecolor='w')
-
 
 def parse_sysargs(sysargs):
     """ Yeah, it's an OptionParser. """

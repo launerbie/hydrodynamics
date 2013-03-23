@@ -58,6 +58,7 @@ def write_to_hdf5(filename, data):
             f[keyword].attrs[name] = hdf5ready.attributes[name]
     f.close()
     del f
+    print "Written hdf5 file to %s."%filename
 
 def read_from_hdf5(filename):
     """ Reads an hdf5 file and returns a HydroResult class. """

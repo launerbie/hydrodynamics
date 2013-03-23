@@ -7,12 +7,13 @@ from support import HydroResults, write_to_hdf5
 
 from amuse.units import units
 from amuse.units import nbody_system
-from amuse.units.quantities import AdaptingVectorQuantity
 from amuse.units.quantities import VectorQuantity
-from amuse.io.base import write_set_to_file
-from amuse.ic.gasplummer import new_plummer_gas_model
+from amuse.units.quantities import AdaptingVectorQuantity
 from amuse.ext.radial_profile import radial_density
+from amuse.ic.gasplummer import new_plummer_gas_model
+from amuse.io.base import write_set_to_file, read_set_from_file
 from amuse.community.fi.interface import Fi
+#todo create runset by datetimestamp
 
 def main(options):
     """ Separates the arguments for the hydro_solver from the
@@ -21,7 +22,10 @@ def main(options):
     hydro_options = {'N':options.N, 'Mtot':options.Mtot,\
                      'Rvir':options.Rvir, 't_end':options.t_end,\
                      'n_steps':options.n_steps,\
-                     'write_hdf5':options.write_hdf5}
+                     'write_hdf5':options.write_hdf5,\
+                     'smashvelocity':options.smashvelocity,\
+                     'plummer1':options.plummer1,\
+                     'plummer2':options.plummer2}
 
     if options.N_vs_t:
         create_N_vs_t(options.N_vs_t)
@@ -39,17 +43,76 @@ def main(options):
     return 0
 
 def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
-                      t_end=0.5|units.day, n_steps=10, write_hdf5=None):
-    """Runs the hydrodynamics simulation and returns a HydroResults
-    instance. """
+                      t_end=0.5|units.day, n_steps=10,\
+                      smashvelocity = 2 |(units.RSun/units.day),\
+                      write_hdf5=None, plummer1=None, plummer2=None):
+    """ Runs the hydrodynamics simulation and returns a HydroResults
+    instance. 
+
+    Function walkthrough:
+
+    In this function 'plummer1' and 'plummer2' are assumed to be hdf5 
+    files written by the function write_set_to_file().
+
+    Case 1: 
+    If 'plummer1' and 'plummer2' are filenames of hdf5 files, then these 
+    two plummer spheres will be smashed together. 
+
+    Case 2:
+    If only plummer1 is supplied, then it will evolve plummer1 with 
+    t_end timerange and n_steps steps.
+
+    Case 3:
+    If no plummers spheres are supplied, then it will generate a new
+    plummer sphere using the default/supplied initial conditions. 
+
+   
+    OUTPUT files:
+
+    Case 1:
+    If write_hdf5 is a specified output filename, then it will create
+    an hdf5 file which contains snapshots of the particle set at each
+    timestep.
+
+    Case 2:
+    If 
+     
+    """
 
     converter = nbody_system.nbody_to_si(Mtot, Rvir)
-    bodies = new_plummer_gas_model(N, convert_nbody=converter)
 
     fi = Fi(converter)
+
+    if plummer1 and plummer2: 
+        eta_smash = 0.3 |units.day
+        bodies1 = read_set_from_file(plummer1, format='hdf5')
+        bodies2 = read_set_from_file(plummer2, format='hdf5')
+        bodies1.move_to_center()
+        bodies2.move_to_center()
+        bodies1.x += (-1)*smashvelocity*eta_smash
+        bodies2.x += 1*smashvelocity*eta_smash
+        bodies1.vx += smashvelocity
+        bodies2.vx += (-1)*smashvelocity 
+        bodies1.vy += smashvelocity*0.3
+        bodies2.vy += (-1)*smashvelocity *0.3
+        bodies1.add_particles(bodies2)
+        bodies = bodies1
+
+    elif plummer1 or plummer2: 
+        if plummer1:
+            bodies = read_set_from_file(plummer1)
+        else:
+            bodies = read_set_from_file(plummer2)
+        bodies.move_to_center()
+
+    else: 
+        bodies = new_plummer_gas_model(N, convert_nbody=converter)
+
     fi.gas_particles.add_particles(bodies)
+    fi_to_framework = fi.gas_particles.new_channel_to(bodies)
 
     fi.parameters.self_gravity_flag = True
+    #fi.parameters.stopping_condition_minimum_density = 0.0|(units.kg*units.m**-3)
 
     data = {'lagrangianradii':AdaptingVectorQuantity(),\
             'angular_momentum':AdaptingVectorQuantity(),\
@@ -73,10 +136,11 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
     timerange = numpy.linspace(0, t_end.value_in(t_end.unit),\
                                   n_steps) | t_end.unit
     data['time'].extend(timerange)
-
+ 
+    fi.parameters.timestep = t_end/(n_steps+1)
+    
     if write_hdf5:
        filename = write_hdf5
-       fi_to_framework = fi.gas_particles.new_channel_to(bodies)
        write_set_to_file(bodies.savepoint(0.0 | t_end.unit),\
                          filename, "hdf5")
        for t in timerange:
@@ -85,6 +149,7 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
            fi_to_framework.copy()
            write_set_to_file(bodies.savepoint(t), filename, "hdf5")
     else:
+       filename = "body_N"+str(N)+"n"+str(n_steps)+".hdf5" 
        for t in timerange:
            print "Evolving to t=%s"%t.as_string_in(t.unit)
            fi.evolve_model(t)
@@ -97,6 +162,9 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
            data['lagrangianradii'].append(fi.particles.LagrangianRadii(\
                                           unit_converter=converter,\
                                           mf=mass_fractions)[0])
+           if t == timerange[-1]:
+               fi_to_framework.copy()
+               write_set_to_file(bodies.savepoint(t), filename, "hdf5")
            
     setattr(data['lagrangianradii'], 'mf', mass_fractions)
 
@@ -193,6 +261,16 @@ def new_option_parser():
     result.add_option("-P", dest="results_out", action='store',\
                       default = None,\
                       help="Filename for plotting data (hdf5 format).")
+    result.add_option("-p", dest="plummer1",type="string", action='store',\
+                      default = None,\
+                      help="First plummer sphere.")
+    result.add_option("-q", dest="plummer2",type="string", action='store',\
+                      default = None,\
+                      help="Second plummer sphere.")
+    result.add_option("-v", unit=(units.RSun/units.day),
+                      dest="smashvelocity", type="float", \
+                      default = 2|(units.RSun/units.day),
+                      help="Smash velocity in RSun/day.[%default]")
     return result
 
 if __name__ in ('__main__'):

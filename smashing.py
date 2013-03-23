@@ -53,18 +53,23 @@ def smash_plummers(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
     #if plummer1 and plummer2
     # Smash them.
 
-    bodies = new_plummer_gas_model(N, convert_nbody=converter)
+    bodies1 = new_plummer_gas_model(N, convert_nbody=converter)
     bodies2 = new_plummer_gas_model(N, convert_nbody=converter)
 
-    bodies2.x += 2 | units.RSun
-    bodies2.vx = -0.0 | (units.RSun / units.day)
+    bodies1.move_to_center()
+    bodies2.move_to_center()
+    bodies1.x += -1 |units.RSun
+    bodies2.vx += 1 |(units.RSun/units.day)
+    bodies1.x += 1 |units.RSun
+    bodies2.vx += -1 |(units.RSun/units.day)
 
-    fi.gas_particles.add_particles(bodies)
+    fi.gas_particles.add_particles(bodies1)
     fi.gas_particles.add_particles(bodies2)
    
-    print fi.gas_particles
+    #print fi.gas_particles
 
     fi.parameters.self_gravity_flag = True
+    fi.parameters.timestep = t_end/(n_steps+1)
 
     data = {'lagrangianradii':AdaptingVectorQuantity(),\
             'angular_momentum':AdaptingVectorQuantity(),\

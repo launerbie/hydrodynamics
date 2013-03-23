@@ -1,17 +1,47 @@
 #!/usr/bin/env python
+import os
 import sys
-from amuse.lab import *
-from support import read_from_hdf5 as read
-import matplotlib.pyplot as plt
-import matplotlib as mpl 
-import numpy as np
+import shutil
+import subprocess
 from optparse import OptionParser
 
+import numpy as np
+import matplotlib as mpl 
+import matplotlib.pyplot as plt
+
+from amuse.lab import *
+from support import read_from_hdf5 as read
+
 def main(options):
-    """ Creates images of the particle positions at each timestep."""
+    """ Creates animation of the particles."""
     results = read(options.hdf5file)
+
+    if os.path.exists('images'):
+        shutil.rmtree('images')
+        os.makedirs('images')
+    else:
+        os.makedirs('images')
+
+    create_images(results, axis_range=options.axis_range)
+
+    if options.outputfile:
+        filename = options.outputfile
+    else:
+        filename = options.hdf5file[:-5]+"r"+str(options.axis_range)+".mp4"
+
+    create_movie(outputfile=filename, fps=options.fps)
+    return 0
+
+def create_movie(outputfile="movie.mp4", fps=30):
+    command = 'ffmpeg -q:v 5 -r %i -b:v 9600 -y -i images/%%04d.png %s'%(\
+              fps, outputfile)
+    subprocess.call(command, shell=True)
+    print "File written to: %s"%outputfile
+
+def create_images(results, axis_range=4.0):
     x = results.positions.x.value_in(units.RSun)
     y = results.positions.y.value_in(units.RSun)
+    z = results.positions.z.value_in(units.RSun)
     
     totalsteps = len(x)
     nr_particles = len(x[0])
@@ -23,11 +53,11 @@ def main(options):
         fig = plt.figure(figsize=(8,8), dpi=300)
         ax1 = fig.add_subplot(111)
 
-        ax1.plot(x[i],y[i], **yellowdots)
+        ax1.scatter(x[i],y[i], s=(10*z[i])/axis_range**2, edgecolor='r', facecolor='y')
         ax1.set_title("Particles:%i,  Steps:%i,  End-time:%f days,  t:%f days"%(nr_particles, totalsteps,\
                            end_time, times[i].value_in(units.day)))
-        ax1.set_xlim(-8.0, 8.0)
-        ax1.set_ylim(-8.0, 8.0)
+        ax1.set_xlim((-1)*axis_range, axis_range)
+        ax1.set_ylim((-1)*axis_range, axis_range)
         ax1.set_xlabel('RSun')
         ax1.set_ylabel('RSun')
         
@@ -35,8 +65,6 @@ def main(options):
         plt.savefig("images/"+zerostring+str(i)+".png", dpi=120)
         fig.clf()
         plt.close()
-
-    return 0
 
 def zeroes(framenr):
     """ Checks how many zeroes need to be added. You don't want 1.jpg 
@@ -82,15 +110,24 @@ def runbright():
 def parse_sysargs(sysargs):
     """ OptionParser. """
     parser = OptionParser()
-    parser.set_defaults(test=False, skip_table=False)
+    parser.set_defaults(test=False)
 
     parser.add_option("-f", "--file", action="store",\
                       dest="hdf5file", default=None,\
                       help="HDF5 file to open")
+    parser.add_option("-o", "--output", action="store",\
+                      dest="outputfile", default=None,\
+                      type='string',\
+                      help="Filename for outputted mp4 file.")
+    parser.add_option("-F", "--fps", action="store", type='int',\
+                      dest="fps", default=30,\
+                      help="FPS: frames per second for encoding.")
+    parser.add_option("-r", "--range", action="store", type='float',\
+                      dest="axis_range", default=4.0,\
+                      help="Size of axis in RSun.")
 
     options, args = parser.parse_args(sysargs[1:])
     return options
-
 
 if __name__ in ('__main__'):
     dark=True
@@ -121,7 +158,6 @@ if __name__ in ('__main__'):
         dots = dict(c='k', ls="o", mfc="k", mec="k", \
                       marker='o', alpha=1.0, ms=1)
         errdots = dict(fmt='o', ls="o", ecolor='r', alpha=1.0)
-
 
     options = parse_sysargs(sys.argv)
     main(options)
