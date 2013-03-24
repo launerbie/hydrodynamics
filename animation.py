@@ -37,9 +37,13 @@ def main(options):
 def create_movie(outputfile="movie.mp4", fps=30):
     """ Encode a list of png's located in hydrodynamics/images into
     an animation. """
-    command = 'ffmpeg -q:v 5 -r %i -b:v 9600 -y -i images/%%04d.png %s'%(\
-              fps, outputfile)
-    subprocess.call(command, shell=True)
+    if os.name == 'posix':
+        command = 'ffmpeg -q:v 5 -r %i -b:v 9600 -y -i images/%%04d.png %s'%(\
+                  fps, outputfile)
+        subprocess.call(command, shell=True)
+    else:
+        #execute windows equivalent statements
+        pass
     print "File written to: %s"%outputfile
 
 def create_images(results, axis_range=4.0, scalefactor=40.0):
