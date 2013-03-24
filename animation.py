@@ -3,17 +3,19 @@ import os
 import sys
 import shutil
 import subprocess
+from progressbar import progressbar as pb
 from optparse import OptionParser
 
 import numpy as np
 import matplotlib as mpl 
 import matplotlib.pyplot as plt
 
-from amuse.lab import *
+from amuse.units import units
 from support import read_from_hdf5 as read
 
 def main(options):
-    """ Creates animation of the particles."""
+    """ Creates animation of the particles by making png's and encode
+    the png's using ffmpeg."""
     results = read(options.hdf5file)
 
     if os.path.exists('images'):
@@ -33,12 +35,16 @@ def main(options):
     return 0
 
 def create_movie(outputfile="movie.mp4", fps=30):
+    """ Encode a list of png's located in hydrodynamics/images into
+    an animation. """
     command = 'ffmpeg -q:v 5 -r %i -b:v 9600 -y -i images/%%04d.png %s'%(\
               fps, outputfile)
     subprocess.call(command, shell=True)
     print "File written to: %s"%outputfile
 
-def create_images(results, axis_range=4.0):
+def create_images(results, axis_range=4.0, scalefactor=40.0):
+    """ Batch creates plots (.png) of the particle's positions and
+    write them to images."""
     x = results.positions.x.value_in(units.RSun)
     y = results.positions.y.value_in(units.RSun)
     z = results.positions.z.value_in(units.RSun)
@@ -48,13 +54,16 @@ def create_images(results, axis_range=4.0):
     times = results.time
     end_time = times[-1].value_in(units.day)
 
+    widget = drawwidget("Generating images")
+    pbar = pb.ProgressBar(widgets=widget, maxval=totalsteps).start()
     for i in range(totalsteps):
-        print i
         fig = plt.figure(figsize=(8,8), dpi=300)
         ax1 = fig.add_subplot(111)
+  
+        size = (scalefactor*z[i])/axis_range**2
 
-        ax1.scatter(x[i],y[i], s=(10*z[i])/axis_range**2, edgecolor='r', facecolor='y')
-        ax1.set_title("Particles:%i,  Steps:%i,  End-time:%f days,  t:%f days"%(nr_particles, totalsteps,\
+        ax1.scatter(x[i],y[i], s=size , edgecolor='b', facecolor='w')
+        ax1.set_title("Particles:%i  Steps:%i  End-time:%f days  t:%f days"%(nr_particles, totalsteps,\
                            end_time, times[i].value_in(units.day)))
         ax1.set_xlim((-1)*axis_range, axis_range)
         ax1.set_ylim((-1)*axis_range, axis_range)
@@ -65,10 +74,20 @@ def create_images(results, axis_range=4.0):
         plt.savefig("images/"+zerostring+str(i)+".png", dpi=120)
         fig.clf()
         plt.close()
+        pbar.update(i)
+    pbar.finish()
+
+def drawwidget(proces_discription):
+    """ Formats the progressbar. """
+    widgets = [proces_discription+": ", pb.Percentage(), ' ',
+               pb.Bar(marker='#',left='[',right=']'),
+               ' ', pb.ETA()]
+    return widgets
 
 def zeroes(framenr):
-    """ Checks how many zeroes need to be added. You don't want 1.jpg 
+    """ Checks how many zeroes need to be added. You don't want 1.jpg
     but 0001.jpg """
+    #To do: specify how many digits you want. Now it's always 4.
     zeroes=0
     if framenr/1000 == 0:
         zeroes += 1
@@ -80,6 +99,8 @@ def zeroes(framenr):
     return zerostring
 
 def rundark():
+    """ Sets the Matplotlib rc parameters to run with a dark
+    background."""
     mpl.rc('lines', linewidth=1, color='w')
     mpl.rc('patch', edgecolor='w')
     mpl.rc('text',  color='w')
@@ -94,6 +115,8 @@ def rundark():
     mpl.rc('savefig', facecolor='k', edgecolor='k')
 
 def runbright():
+    """ Sets the Matplotlib rc parameters to run with a bright
+    background."""
     mpl.rc('lines', linewidth=1, color='w')
     mpl.rc('patch', edgecolor='w')
     mpl.rc('text',  color='k')
@@ -125,6 +148,9 @@ def parse_sysargs(sysargs):
     parser.add_option("-r", "--range", action="store", type='float',\
                       dest="axis_range", default=4.0,\
                       help="Size of axis in RSun.")
+    parser.add_option("-s", "--scale", action="store", type='float',\
+                      dest="scalefactor", default=40.0,\
+                      help="Scale factor for dots.")
 
     options, args = parser.parse_args(sysargs[1:])
     return options

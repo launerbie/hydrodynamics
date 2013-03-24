@@ -3,6 +3,7 @@
 
 import time
 import numpy
+from progressbar import progressbar as pb
 from support import HydroResults, write_to_hdf5
 
 from amuse.units import units
@@ -18,12 +19,14 @@ from amuse.community.fi.interface import Fi
 def main(options):
     """ Separates the arguments for the hydro_solver from the
     program control-flow arguments. Runs stuff."""
-    start_time = time.time()
+
     hydro_options = {'N':options.N, 'Mtot':options.Mtot,\
                      'Rvir':options.Rvir, 't_end':options.t_end,\
                      'n_steps':options.n_steps,\
                      'write_hdf5':options.write_hdf5,\
-                     'smashvelocity':options.smashvelocity,\
+                     'vx':options.vx,\
+                     'vy':options.vy,\
+                     'vz':options.vz,\
                      'plummer1':options.plummer1,\
                      'plummer2':options.plummer2}
 
@@ -35,16 +38,15 @@ def main(options):
 
     results = run_hydrodynamics(**hydro_options)
     
-    end_time = time.time()
-    print "Total runtime:", end_time-start_time, "seconds."
-    
     if options.results_out:
         write_to_hdf5(options.results_out, results.__dict__)
     return 0
 
 def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
                       t_end=0.5|units.day, n_steps=10,\
-                      smashvelocity = 2 |(units.RSun/units.day),\
+                      vx = 2 |(units.RSun/units.day),\
+                      vy = 0 |(units.RSun/units.day),\
+                      vz = 0 |(units.RSun/units.day),\
                       write_hdf5=None, plummer1=None, plummer2=None):
     """ Runs the hydrodynamics simulation and returns a HydroResults
     instance. 
@@ -78,7 +80,6 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
     If 
      
     """
-
     converter = nbody_system.nbody_to_si(Mtot, Rvir)
 
     fi = Fi(converter)
@@ -89,12 +90,14 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
         bodies2 = read_set_from_file(plummer2, format='hdf5')
         bodies1.move_to_center()
         bodies2.move_to_center()
-        bodies1.x += (-1)*smashvelocity*eta_smash
-        bodies2.x += 1*smashvelocity*eta_smash
-        bodies1.vx += smashvelocity
-        bodies2.vx += (-1)*smashvelocity 
-        bodies1.vy += smashvelocity*0.3
-        bodies2.vy += (-1)*smashvelocity *0.3
+        bodies1.x += (-1)*vx*eta_smash
+        bodies2.x += 1*vx*eta_smash
+        bodies1.vx += vx
+        bodies2.vx += (-1)*vx 
+        bodies1.vy += vy
+        bodies2.vy += (-1)*vy
+        bodies1.vz += vz
+        bodies2.vz += (-1)*vz
         bodies1.add_particles(bodies2)
         bodies = bodies1
 
@@ -112,7 +115,6 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
     fi_to_framework = fi.gas_particles.new_channel_to(bodies)
 
     fi.parameters.self_gravity_flag = True
-    #fi.parameters.stopping_condition_minimum_density = 0.0|(units.kg*units.m**-3)
 
     data = {'lagrangianradii':AdaptingVectorQuantity(),\
             'angular_momentum':AdaptingVectorQuantity(),\
@@ -150,8 +152,9 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
            write_set_to_file(bodies.savepoint(t), filename, "hdf5")
     else:
        filename = "body_N"+str(N)+"n"+str(n_steps)+".hdf5" 
-       for t in timerange:
-           print "Evolving to t=%s"%t.as_string_in(t.unit)
+       widget = drawwidget("Evolving")
+       pbar = pb.ProgressBar(widgets=widget, maxval=len(timerange)).start()
+       for i, t in enumerate(timerange):
            fi.evolve_model(t)
            data['kinetic_energy'].append(fi.kinetic_energy)
            data['potential_energy'].append(fi.potential_energy)
@@ -165,6 +168,8 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
            if t == timerange[-1]:
                fi_to_framework.copy()
                write_set_to_file(bodies.savepoint(t), filename, "hdf5")
+           pbar.update(i)
+       pbar.finish()
            
     setattr(data['lagrangianradii'], 'mf', mass_fractions)
 
@@ -231,6 +236,12 @@ def create_N_vs_E(filename, N_list=None):
     results = HydroResults(data)
     results.writeto_hdf5file(filename)
 
+def drawwidget(proces_discription):
+    widgets = [proces_discription+": ", pb.Percentage(), ' ',
+               pb.Bar(marker='#',left='[',right=']'),
+               ' ', pb.ETA()]
+    return widgets
+
 def new_option_parser():
     from amuse.units.optparse import OptionParser
     from amuse.units import units
@@ -267,10 +278,18 @@ def new_option_parser():
     result.add_option("-q", dest="plummer2",type="string", action='store',\
                       default = None,\
                       help="Second plummer sphere.")
-    result.add_option("-v", unit=(units.RSun/units.day),
-                      dest="smashvelocity", type="float", \
+    result.add_option("--vx", unit=(units.RSun/units.day),
+                      dest="vx", type="float", \
                       default = 2|(units.RSun/units.day),
-                      help="Smash velocity in RSun/day.[%default]")
+                      help="Smash velocity x in RSun/day.[%default]")
+    result.add_option("--vy", unit=(units.RSun/units.day),
+                      dest="vy", type="float", \
+                      default = 0|(units.RSun/units.day),
+                      help="Smash velocity y in RSun/day.[%default]")
+    result.add_option("--vz", unit=(units.RSun/units.day),
+                      dest="vz", type="float", \
+                      default = 0|(units.RSun/units.day),
+                      help="Smash velocity z in RSun/day.[%default]")
     return result
 
 if __name__ in ('__main__'):
