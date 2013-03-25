@@ -1,5 +1,7 @@
 #!/usr/bin/env python
+import os
 import h5py
+import numpy
 from amuse.units import units
 from amuse.units.quantities import VectorQuantity
 from amuse.units.quantities import AdaptingVectorQuantity
@@ -92,6 +94,51 @@ def parse_unitsstring(string):
     plus_units = ["units."+elem for elem in units_splitted]
     full_unitstring =  " * ".join(plus_units)
     return full_unitstring
+
+def setup_directories(*dirs):
+    """ Creates directories if they don't already exist."""
+    for directory in dirs:
+        if os.path.exists(directory):
+            pass    
+        else:
+            os.makedirs(directory)
+    
+def radial_density(r,mass,N=100,dim=3):
+    """ Took this from amuse.ext.radial_profile and changed it so that
+    it returns a VectorQuantity."""
+    if dim==3:
+        volfac=numpy.pi*4./3.
+    elif dim==2:
+        volfac=numpy.pi
+    else:
+        volfac=1
+  
+    n=len(r)
+    a=r.argsort()
+    i=0
+    r_a=[]
+    dens=[]
+    oldrshell=0.*r[0]
+    while i != n-1:
+        i1=i+N
+        if( n-i1 < N ): i1=n-1 
+        rshell=(r[a[i1]]+r[a[i1-1]])/2
+        ra=r[a[i:i1]].sum()/(i1-i)/2+(oldrshell+rshell)/4
+        da=mass[a[i:i1]].sum()/(rshell**dim-oldrshell**dim)
+        oldrshell=rshell
+        r_a.append(ra)
+        dens.append(da)
+        i=i1
+
+    radii = numpy.array(r_a)
+    densities = numpy.array(dens)/volfac
+
+    radii_vq = VectorQuantity.new_from_scalar_quantities(*radii)
+    densities_vq = VectorQuantity.new_from_scalar_quantities(*densities)
+
+    return (radii_vq, densities_vq)
+
+
     
 
 

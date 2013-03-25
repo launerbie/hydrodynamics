@@ -1,29 +1,29 @@
 #!/usr/bin/env python
-#This line is 72 characters loooooooooooooooooooooooooooooooooooooooong.
 
 import time
 import numpy
 from progressbar import progressbar as pb
+
 from support import HydroResults, write_to_hdf5
+from support import radial_density
+from support import setup_directories
 
 from amuse.units import units
 from amuse.units import nbody_system
-from amuse.units.quantities import VectorQuantity
 from amuse.units.quantities import AdaptingVectorQuantity
-from amuse.ext.radial_profile import radial_density
 from amuse.ic.gasplummer import new_plummer_gas_model
 from amuse.io.base import write_set_to_file, read_set_from_file
 from amuse.community.fi.interface import Fi
-#todo create runset by datetimestamp
 
 def main(options):
     """ Separates the arguments for the hydro_solver from the
     program control-flow arguments. Runs stuff."""
 
+    #todo check, whether hydro_fi is run from the correct directory
+
     hydro_options = {'N':options.N, 'Mtot':options.Mtot,\
                      'Rvir':options.Rvir, 't_end':options.t_end,\
                      'n_steps':options.n_steps,\
-                     'write_hdf5':options.write_hdf5,\
                      'vx':options.vx,\
                      'vy':options.vy,\
                      'vz':options.vz,\
@@ -36,25 +36,31 @@ def main(options):
     if options.N_vs_E:
         create_N_vs_E(options.N_vs_E)
 
+    setup_directories('bodies','hydroresults')
+
     results = run_hydrodynamics(**hydro_options)
     
     if options.results_out:
-        write_to_hdf5(options.results_out, results.__dict__)
+        write_to_hdf5('hydroresults/'+options.results_out,\
+                      results.__dict__)
     return 0
+
 
 def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
                       t_end=0.5|units.day, n_steps=10,\
                       vx = 2 |(units.RSun/units.day),\
                       vy = 0 |(units.RSun/units.day),\
                       vz = 0 |(units.RSun/units.day),\
-                      write_hdf5=None, plummer1=None, plummer2=None):
+                      plummer1=None, plummer2=None):
+
     """ Runs the hydrodynamics simulation and returns a HydroResults
     instance. 
 
-    Function walkthrough:
 
-    In this function 'plummer1' and 'plummer2' are assumed to be hdf5 
-    files written by the function write_set_to_file().
+    FUNCTION WALKTHROUGH:
+
+    In the following explanation 'plummer1' and 'plummer2' are assumed
+    to be hdf5 files written by the function write_set_to_file().
 
     Case 1: 
     If 'plummer1' and 'plummer2' are filenames of hdf5 files, then these 
@@ -69,17 +75,22 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
     plummer sphere using the default/supplied initial conditions. 
 
    
-    OUTPUT files:
+    OUTPUT FILES:
 
-    Case 1:
-    If write_hdf5 is a specified output filename, then it will create
-    an hdf5 file which contains snapshots of the particle set at each
-    timestep.
+    If 'results_out' is specified, the HydroResult instance is written
+    to file in HDF5 format. This however does not use 
+    write_set_to_file() which writes the entire Particles class and
+    its attributes to file at each dt, but uses write_to_hdf5() 
+    from the 'support' module which is tailored to writing
+    HydroResults instances to file. This HDF5 contains all necessary
+    data to plot the required plots of the assignment.
+    
+    In addition, the last snapshot of the Particles instance is written
+    to file using write_set_to_file(), the latter file is written to 
+    the 'bodies' directory. Only the last snapshot is written to file
+    because the history of a Particle set is not of interest when 
+    reloading them to smash plummer spheres.   """
 
-    Case 2:
-    If 
-     
-    """
     converter = nbody_system.nbody_to_si(Mtot, Rvir)
 
     fi = Fi(converter)
@@ -125,62 +136,41 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
             'total_energy':AdaptingVectorQuantity() } 
 
     mass_fractions = [0.10, 0.25, 0.50, 0.75]
+    setattr(data['lagrangianradii'], 'mf', mass_fractions)
 
-    radius_init, densities_init = radial_density(fi.particles.x, \
-                                      fi.particles.mass, N=10, dim=1)
-
-    radius_init = VectorQuantity.new_from_scalar_quantities(*radius_init)
-    densities_init = VectorQuantity.new_from_scalar_quantities(*densities_init)
-    
-    data['radius_initial'] = radius_init 
-    data['densities_initial'] = densities_init 
+    data['radius_initial'], data['densities_initial'] = radial_density(\
+         fi.particles.x, fi.particles.mass, N=10, dim=1)
 
     timerange = numpy.linspace(0, t_end.value_in(t_end.unit),\
                                   n_steps) | t_end.unit
     data['time'].extend(timerange)
  
     fi.parameters.timestep = t_end/(n_steps+1)
-    
-    if write_hdf5:
-       filename = write_hdf5
-       write_set_to_file(bodies.savepoint(0.0 | t_end.unit),\
-                         filename, "hdf5")
-       for t in timerange:
-           print "Evolving to t=%s"%t.as_string_in(t.unit)
-           fi.evolve_model(t)
-           fi_to_framework.copy()
-           write_set_to_file(bodies.savepoint(t), filename, "hdf5")
-    else:
-       filename = "body_N"+str(N)+"n"+str(n_steps)+".hdf5" 
-       widget = drawwidget("Evolving")
-       pbar = pb.ProgressBar(widgets=widget, maxval=len(timerange)).start()
-       for i, t in enumerate(timerange):
-           fi.evolve_model(t)
-           data['kinetic_energy'].append(fi.kinetic_energy)
-           data['potential_energy'].append(fi.potential_energy)
-           data['total_energy'].append(fi.total_energy)
-           data['positions'].append(fi.particles.position)
-           data['angular_momentum'].append(fi.gas_particles.\
-                                           total_angular_momentum())
-           data['lagrangianradii'].append(fi.particles.LagrangianRadii(\
-                                          unit_converter=converter,\
-                                          mf=mass_fractions)[0])
-           if t == timerange[-1]:
-               fi_to_framework.copy()
-               write_set_to_file(bodies.savepoint(t), filename, "hdf5")
-           pbar.update(i)
-       pbar.finish()
-           
-    setattr(data['lagrangianradii'], 'mf', mass_fractions)
 
-    radius_end, densities_end = radial_density(fi.particles.x, \
-                                      fi.particles.mass, N=10, dim=1)
-
-    radius_end = VectorQuantity.new_from_scalar_quantities(*radius_end)
-    densities_end = VectorQuantity.new_from_scalar_quantities(*densities_end)
     
-    data['radius_final'] = radius_end 
-    data['densities_final'] = densities_end 
+    filename = "bodies/body_N"+str(N)+"n"+str(n_steps)+".hdf5" 
+    widget = drawwidget("Evolving")
+    pbar = pb.ProgressBar(widgets=widget, maxval=len(timerange)).start()
+
+    for i, t in enumerate(timerange):
+        fi.evolve_model(t)
+        data['kinetic_energy'].append(fi.kinetic_energy)
+        data['potential_energy'].append(fi.potential_energy)
+        data['total_energy'].append(fi.total_energy)
+        data['positions'].append(fi.particles.position)
+        data['angular_momentum'].append(fi.gas_particles.\
+                                        total_angular_momentum())
+        data['lagrangianradii'].append(fi.particles.LagrangianRadii(\
+                                       unit_converter=converter,\
+                                       mf=mass_fractions)[0])
+        if t == timerange[-1]:
+            fi_to_framework.copy()
+            write_set_to_file(bodies.savepoint(t), filename, "hdf5")
+        pbar.update(i)
+    pbar.finish()
+
+    data['radius_final'], data['densities_final'] = radial_density(\
+         fi.particles.x, fi.particles.mass, N=10, dim=1)
 
     fi.stop()
 
@@ -191,19 +181,18 @@ def create_N_vs_t(filename, N_list=None):
     """ Iteratively runs run_hydrodynamics for several N in order to 
     create the data for the N vs. wallclock-time plot. Writes data to 
     hdf5 file."""
+
     if N_list:
         N = N_list
     else:
         N = [10, 50, 100, 500, 1000, 5000, 10000] 
+
     total_runtimes = []
     for nr_particles in N: 
         start_time = time.time()
         run_hydrodynamics(N=nr_particles, n_steps=1)
         total_runtime = time.time() - start_time
         total_runtimes.append((total_runtime, nr_particles))
-    if print_it == True:
-        for elem in total_runtimes:
-            print "runtime:", elem[0],"nr_particles", elem[1]
 
     N_as_vq = N | units.no_unit 
     total_runtimes_as_vq = total_runtimes | units.s
@@ -216,18 +205,16 @@ def create_N_vs_E(filename, N_list=None):
     """ Iteratively runs run_hydrodynamics for several N in order to 
     create the data for the N vs. Energy error plot. Writes data to hdf5
     file."""
+
     if N_list:
         N = N_list
     else:
         N = range(10, 1000, 50) 
+
     energy_errors = []
     for nr_particles in N: 
         energy_error = run_hydrodynamics(N=nr_particles, n_steps=100)
         energy_errors.append((energy_error, nr_particles))
-
-    if print_it == True:
-        for elem in energy_errors:
-            print "energy error:", elem[0],"nr_particles", elem[1]
 
     N_as_vq = N | units.no_unit 
     energy_errors_as_vq = energy_errors | units.s
@@ -266,17 +253,14 @@ def new_option_parser():
     result.add_option("-E", dest="N_vs_E", action='store',\
                       default = None,\
                       help="Create plot of N vs energy error.")
-    result.add_option("-H", dest="write_hdf5", type="string", action='store',\
-                      default = None,\
-                      help="Filename for hdf5 output.")
-    result.add_option("-P", dest="results_out", action='store',\
+    result.add_option("-H", dest="results_out", action='store',\
                       default = None,\
                       help="Filename for plotting data (hdf5 format).")
-    result.add_option("-p", dest="plummer1",type="string", action='store',\
-                      default = None,\
+    result.add_option("-p", dest="plummer1",type="string", \
+                      action='store', default = None,\
                       help="First plummer sphere.")
-    result.add_option("-q", dest="plummer2",type="string", action='store',\
-                      default = None,\
+    result.add_option("-q", dest="plummer2",type="string", \
+                      action='store', default = None,\
                       help="Second plummer sphere.")
     result.add_option("--vx", unit=(units.RSun/units.day),
                       dest="vx", type="float", \
@@ -296,6 +280,5 @@ if __name__ in ('__main__'):
     options, arguments = new_option_parser().parse_args()
     main(options)
 
-    #fi.parameters.isothermal_flag = True
-    #fi.parameters.integrate_entropy_flag = False
-    #fi.parameters.gamma = 1
+#fi.parameters.isothermal_flag = True
+#fi.parameters.integrate_entropy_flag = False

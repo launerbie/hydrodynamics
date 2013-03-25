@@ -1,9 +1,8 @@
 #!/usr/bin/env python
+import shutil
 import os
 import sys
-import shutil
 import subprocess
-from progressbar import progressbar as pb
 from optparse import OptionParser
 
 import numpy as np
@@ -11,7 +10,11 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from amuse.units import units
+
+from progressbar import progressbar as pb
+
 from support import read_from_hdf5 as read
+from support import setup_directories
 
 def main(options):
     """ Creates animation of the particles by making png's and encode
@@ -24,6 +27,8 @@ def main(options):
     else:
         os.makedirs('images')
 
+    setup_directories('movies')
+
     create_images(results, axis_range=options.axis_range)
 
     if options.outputfile:
@@ -31,18 +36,20 @@ def main(options):
     else:
         filename = options.hdf5file[:-5]+"r"+str(options.axis_range)+".mp4"
 
-    create_movie(outputfile=filename, fps=options.fps)
+    create_movie(outputfile='movies/'+filename, fps=options.fps)
     return 0
 
-def create_movie(outputfile="movie.mp4", fps=30):
+def create_movie(outputfile="movies/movie.mp4", fps=30):
     """ Encode a list of png's located in hydrodynamics/images into
     an animation. """
-    if os.name == 'posix':
+    if os.name.lower() == 'posix':
+        outputfile = "movies/movie.mp4" #fix this
         command = 'ffmpeg -q:v 5 -r %i -b:v 9600 -y -i images/%%04d.png %s'%(\
                   fps, outputfile)
         subprocess.call(command, shell=True)
     else:
         #execute windows equivalent statements
+        print "Not creating movie, no support on windows (yet?)."
         pass
     print "File written to: %s"%outputfile
 
