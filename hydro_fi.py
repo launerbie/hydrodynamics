@@ -24,6 +24,7 @@ def main(options):
     hydro_options = {'N':options.N, 'Mtot':options.Mtot,\
                      'Rvir':options.Rvir, 't_end':options.t_end,\
                      'n_steps':options.n_steps,\
+                     'bodyname':options.bodyname,\
                      'vx':options.vx,\
                      'vy':options.vy,\
                      'vz':options.vz,\
@@ -51,7 +52,9 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
                       vx = 2 |(units.RSun/units.day),\
                       vy = 0 |(units.RSun/units.day),\
                       vz = 0 |(units.RSun/units.day),\
-                      plummer1=None, plummer2=None):
+                      plummer1=None, plummer2=None,\
+                      bodyname = None,\
+                      smash=False):
 
     """ Runs the hydrodynamics simulation and returns a HydroResults
     instance. 
@@ -96,9 +99,15 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
     fi = Fi(converter)
 
     if plummer1 and plummer2: 
+        smash=True
         eta_smash = 0.3 |units.day
-        bodies1 = read_set_from_file(plummer1, format='hdf5')
-        bodies2 = read_set_from_file(plummer2, format='hdf5')
+        if plummer1 == plummer2:
+            bodies1 = read_set_from_file(plummer1, format='hdf5')
+            bodies2 = bodies1.copy()
+            bodies2.key += 1
+        else:
+            bodies1 = read_set_from_file(plummer1, format='hdf5')
+            bodies2 = read_set_from_file(plummer2, format='hdf5')
         bodies1.move_to_center()
         bodies2.move_to_center()
         bodies1.x += (-1)*vx*eta_smash
@@ -147,8 +156,11 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
  
     fi.parameters.timestep = t_end/(n_steps+1)
 
-    
-    filename = "bodies/body_N"+str(N)+"n"+str(n_steps)+".hdf5" 
+    if bodyname:
+        filename = "bodies/"+bodyname 
+    else:
+        filename = "bodies/body_N"+str(N)+"n"+str(n_steps)+".hdf5" 
+
     widget = drawwidget("Evolving")
     pbar = pb.ProgressBar(widgets=widget, maxval=len(timerange)).start()
 
@@ -163,9 +175,10 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
         data['lagrangianradii'].append(fi.particles.LagrangianRadii(\
                                        unit_converter=converter,\
                                        mf=mass_fractions)[0])
-        if t == timerange[-1]:
+        if t == timerange[-1] and smash == False:
             fi_to_framework.copy()
             write_set_to_file(bodies.savepoint(t), filename, "hdf5")
+
         pbar.update(i)
     pbar.finish()
 
@@ -256,6 +269,9 @@ def new_option_parser():
     result.add_option("-H", dest="results_out", action='store',\
                       default = None,\
                       help="Filename for plotting data (hdf5 format).")
+    result.add_option("-B", dest="bodyname", action='store',\
+                      default = None,\
+                      help="Filename for resulting body (hdf5 format).")
     result.add_option("-p", dest="plummer1",type="string", \
                       action='store', default = None,\
                       help="First plummer sphere.")
