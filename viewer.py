@@ -12,12 +12,16 @@ import matplotlib as mpl
 from support import read_from_hdf5
 
 def main(options):
+    """ Loads HydroResults instance from an hdf5 file and plots the 
+    results."""
     filename = options.hdf5file
     results = read_from_hdf5(filename)
     plot_all(results)
     return 0 
 
 def plot_all(results):
+    """ Plots some attributes of a HydroResults instance and saves it
+    to png."""
     n_steps = len(results.time)
     N = len(results.positions.x[0])
 
@@ -43,46 +47,65 @@ def plot_all(results):
 
     times = results.time
    
-    fig = plt.figure()
+    fig = plt.figure(figsize=(12,12), dpi=300)
 
     ax1 = fig.add_subplot(221)
     ax2 = fig.add_subplot(222)
     ax3 = fig.add_subplot(223)
     ax4 = fig.add_subplot(224)
 
-    ax1.plot( times.value_in(times.unit),     lr1.value_in(lr1.unit), label='10%',  **line)
-    ax1.plot( times.value_in(times.unit),     lr2.value_in(lr1.unit), label='25%', **yellowline)
-    ax1.plot( times.value_in(times.unit),     lr3.value_in(lr1.unit), label='50%', **redline)
-    ax1.plot( times.value_in(times.unit),     lr4.value_in(lr1.unit), label='75%', **greenline)
+    ax1.plot(times.value_in(times.unit), lr1.value_in(lr1.unit),\
+             label='10%',  **line)
+    ax1.plot(times.value_in(times.unit), lr2.value_in(lr1.unit),\
+             label='25%', **yellowline)
+    ax1.plot(times.value_in(times.unit), lr3.value_in(lr1.unit),\
+             label='50%', **redline)
+    ax1.plot(times.value_in(times.unit), lr4.value_in(lr1.unit),\
+             label='75%', **greenline)
+
     ax1.set_xlabel('Time in %s'%times.unit.__str__())
     ax1.set_ylabel('Lagrangian Radius in %s'%lr1.unit.__str__())
     ax1.legend(loc='best')
 
-    ax2.plot( times.value_in(times.unit),    L.value_in(Lx.unit),  label='L',  **line )
-    ax2.plot( times.value_in(times.unit),    Lx.value_in(Lx.unit), label='Lx',  **yellowline )
-    ax2.plot( times.value_in(times.unit),    Ly.value_in(Lx.unit), label='Ly',  **redline )
-    ax2.plot( times.value_in(times.unit),    Lz.value_in(Lx.unit), label='Lz',  **greenline)
+
+    ax2.plot(times.value_in(times.unit), L.value_in(Lx.unit),\
+             label='L', **line )
+    ax2.plot(times.value_in(times.unit), Lx.value_in(Lx.unit),\
+             label='Lx', **yellowline )
+    ax2.plot(times.value_in(times.unit), Ly.value_in(Lx.unit),\
+             label='Ly', **redline )
+    ax2.plot(times.value_in(times.unit), Lz.value_in(Lx.unit),\
+             label='Lz', **greenline)
+
     ax2.set_xlabel('Time in %s'%times.unit.__str__())
     ax2.set_ylabel('Angular Momentum in %s'%L.unit.__str__())
     ax2.legend(loc='best')
 
-    ax3.plot(  times.value_in(times.unit),   Ekin.value_in(Ekin.unit),label='Kinetic',  **line)
-    ax3.plot(  times.value_in(times.unit),   Epot.value_in(Ekin.unit),label='Potential',  **yellowline)
-    ax3.plot(  times.value_in(times.unit),   Etot.value_in(Ekin.unit),label='Total',  **redline)
-    #ax3.plot(Eerr.value_in(Ekin.unit), times.value_in(times.unit))    
+
+    ax3.plot(times.value_in(times.unit), Ekin.value_in(Ekin.unit),\
+             label='Kinetic',  **redline)
+    ax3.plot(times.value_in(times.unit), Epot.value_in(Ekin.unit),\
+             label='Potential', **yellowline)
+    ax3.plot(times.value_in(times.unit), Etot.value_in(Ekin.unit),\
+             label='Total',**line)
+
     ax3.set_xlabel('Time in %s'%times.unit.__str__())
     ax3.set_ylabel('Energy in %s'%Etot.unit.__str__())
     ax3.legend(loc='best')
 
-    ax4.plot(radius_initial.value_in(radius_initial.unit), densities_initial.value_in(densities_initial.unit), label='Initial', **line )
-    ax4.plot(radius_final.value_in(radius_final.unit), densities_final.value_in(densities_initial.unit), label='Final', **yellowline )
+    ax4.plot(radius_initial.value_in(radius_initial.unit),\
+             densities_initial.value_in(densities_initial.unit),\
+             label='Initial', **line )
+    ax4.plot(radius_final.value_in(radius_final.unit),\
+             densities_final.value_in(densities_initial.unit),\
+             label='Final', **yellowline )
+
     ax4.set_xlabel('Radius in %s'%radius_initial.unit.__str__())
     ax4.set_ylabel('Density in %s'%densities_initial.unit.__str__())
-    ax4.set_xlim(-2,3)
     ax4.legend(loc='best')
+
     plt.suptitle('Particles: %i  Steps: %i'%(N, n_steps))
-    plt.show()
-    pass
+    plt.savefig('test.png')
 
 #def plot_Ndependence(results):
 #    fig = plt.figure()
@@ -127,13 +150,13 @@ def rundark():
     mpl.rc('text',  color='w')
     mpl.rc('font',  size=9, family='sans-serif')
     mpl.rc('axes', facecolor='k', edgecolor='w', labelcolor='w', \
-            color_cycle=[ 'w','r','g','y',  'c', 'm', 'b', 'k'],\
+            color_cycle=[ 'w','r','g','y', 'c', 'm', 'b', 'k'],\
             labelsize=9)
     mpl.rc('xtick', color='w')
     mpl.rc('ytick', color='w')
     mpl.rc('grid', color='w')
     mpl.rc('figure', facecolor='k', edgecolor='k')
-    mpl.rc('savefig', facecolor='k', edgecolor='k')
+    mpl.rc('savefig', dpi=150, facecolor='k', edgecolor='k')
 
 def runbright():
     mpl.rc('lines', linewidth=1, color='w')
@@ -141,13 +164,13 @@ def runbright():
     mpl.rc('text',  color='k')
     mpl.rc('font',  size=9, family='sans-serif')
     mpl.rc('axes', facecolor='w', edgecolor='k', labelcolor='k', \
-            color_cycle=[ 'k','r','g','y',  'c', 'm', 'b', 'w'],\
+            color_cycle=[ 'k','r','g','y', 'c', 'm', 'b', 'w'],\
             labelsize=9)
     mpl.rc('xtick', color='k')
     mpl.rc('ytick', color='k')
     mpl.rc('grid', color='k')
     mpl.rc('figure', facecolor='w', edgecolor='w')
-    mpl.rc('savefig', facecolor='w', edgecolor='w')
+    mpl.rc('savefig', dpi=150, facecolor='w', edgecolor='w')
 
 def parse_sysargs(sysargs):
     """ Yeah, it's an OptionParser. """
@@ -171,6 +194,7 @@ def parse_sysargs(sysargs):
     return options
 
 if __name__ == "__main__":
+    options = parse_sysargs(sys.argv) 
     dark=True
     redline     = dict(c='r', ls="-", lw=1, alpha=1.0)
     yellowline  = dict(c='y', ls="-", lw=1, alpha=1.0)
@@ -203,5 +227,4 @@ if __name__ == "__main__":
                       marker='o', alpha=1.0, ms=1)
         errdots = dict(fmt='o', ls="o", ecolor='r', alpha=1.0)
 
-    options = parse_sysargs(sys.argv) 
     main(options)
