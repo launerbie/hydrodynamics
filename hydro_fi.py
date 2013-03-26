@@ -7,6 +7,7 @@ from progressbar import progressbar as pb
 from support import HydroResults, write_to_hdf5
 from support import radial_density
 from support import setup_directories
+from viewer import plot_all
 
 from amuse.units import units
 from amuse.units import nbody_system
@@ -18,8 +19,6 @@ from amuse.community.fi.interface import Fi
 def main(options):
     """ Separates the arguments for the hydro_solver from the
     program control-flow arguments. Runs stuff."""
-
-    #todo check, whether hydro_fi is run from the correct directory
 
     hydro_options = {'N':options.N, 'Mtot':options.Mtot,\
                      'Rvir':options.Rvir, 't_end':options.t_end,\
@@ -44,6 +43,8 @@ def main(options):
     if options.results_out:
         write_to_hdf5('hydroresults/'+options.results_out,\
                       results.__dict__)
+        pngfilename = options.results_out.split('.')[0]+'.png'
+        plot_all(results, filepath = "plots/"+pngfilename)
     return 0
 
 

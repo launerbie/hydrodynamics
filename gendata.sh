@@ -29,12 +29,12 @@
 #
 
 
-mpiexec amuse hydro_fi.py -N 1000 -n 100 -t 0.5 -B testbody1.hdf5
+#mpiexec amuse hydro_fi.py -N 1000 -n 100 -t 0.5 -B testbody1.hdf5
 
-mpiexec amuse hydro_fi.py -n 200 -t 0.5 -H smash_vx15vy15.hdf5 \
--p bodies/testbody1.hdf5 -q bodies/testbody1.hdf5 --vx 15 --vy 15 --vz 0 
+mpiexec amuse64 hydro_fi.py -n 100 -t 1.5 -H smash_vx15vy5.hdf5 \
+-p bodies/testbody1.hdf5 -q bodies/testbody1.hdf5 --vx 15 --vy 5 --vz 0 
 
-mpiexec amuse animation.py -f hydroresults/smash_vx15vy15.hdf5 -r 4
+mpiexec amuse64 animation.py -f hydroresults/smash_vx15vy5.hdf5 -r 4
 
 
 

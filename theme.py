@@ -14,7 +14,7 @@ def rundark():
     mpl.rc('ytick', color='w')
     mpl.rc('grid', color='w')
     mpl.rc('figure', facecolor='k', edgecolor='k')
-    mpl.rc('savefig', dpi=150, facecolor='k', edgecolor='k')
+    mpl.rc('savefig', dpi=100, facecolor='k', edgecolor='k')
 
 def runbright():
     mpl.rc('lines', linewidth=1, color='w')
@@ -28,7 +28,7 @@ def runbright():
     mpl.rc('ytick', color='k')
     mpl.rc('grid', color='k')
     mpl.rc('figure', facecolor='w', edgecolor='w')
-    mpl.rc('savefig', dpi=150, facecolor='w', edgecolor='w')
+    mpl.rc('savefig', dpi=100, facecolor='w', edgecolor='w')
 
 if __name__ == "theme":
     dark=True

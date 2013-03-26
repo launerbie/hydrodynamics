@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import theme
+import os
 import sys
 import h5py
 
@@ -14,12 +16,13 @@ from support import read_from_hdf5
 def main(options):
     """ Loads HydroResults instance from an hdf5 file and plots the 
     results."""
-    filename = options.hdf5file
-    results = read_from_hdf5(filename)
-    plot_all(results)
+    filepath = options.hdf5file
+    results = read_from_hdf5(filepath)
+
+    plot_all(results, filepath = filepath)
     return 0 
 
-def plot_all(results):
+def plot_all(results, filepath=None):
     """ Plots some attributes of a HydroResults instance and saves it
     to png."""
     n_steps = len(results.time)
@@ -104,8 +107,10 @@ def plot_all(results):
     ax4.set_ylabel('Density in %s'%densities_initial.unit.__str__())
     ax4.legend(loc='best')
 
-    plt.suptitle('Particles: %i  Steps: %i'%(N, n_steps))
-    plt.savefig('test.png')
+    plt.suptitle('Particles: %i  Steps: %i '%(N, n_steps ))
+
+    if filepath:
+        plt.savefig(filepath)
 
 #def plot_Ndependence(results):
 #    fig = plt.figure()
@@ -165,5 +170,4 @@ def parse_sysargs(sysargs):
 
 if __name__ == "__main__":
     options = parse_sysargs(sys.argv) 
-    import theme
     main(options)
