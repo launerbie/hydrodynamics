@@ -112,17 +112,19 @@ def plot_all(results, filepath=None):
     if filepath:
         plt.savefig(filepath)
 
-def plot_steptimes(steptimes):
+def plot_steptimes(steptimes, filepath = None):
+    N = results.N
+    times = results.runtimes
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
-    
     ax1.plot(range(len(steptimes)), steptimes, **yellowline)
     ax1.set_xlabel('N')
     ax1.set_ylabel('step time [in seconds]')
-    plt.savefig(filepath)
+ 
+    if filepath:
+        plt.savefig(filepath)
 
-def plot_energy(energy, energy_error, value_in="units.J"):
-    energy = eval("energy.value_in("+value_in+")")
+def plot_energy(energy, energy_error, filepath = None):
     fig = plt.figure()
     ax1 = fig.add_subplot(211)
     ax2 = fig.add_subplot(212)
@@ -134,7 +136,9 @@ def plot_energy(energy, energy_error, value_in="units.J"):
     ax2.plot(range(len(energy)), energy_error, **yellowline)
     ax2.set_xlabel('N')
     ax2.set_ylabel('energy_error')
-    plt.savefig(filepath)
+
+    if filepath:
+        plt.savefig(filepath)
 
 def parse_sysargs(sysargs):
     parser = OptionParser()

@@ -8,6 +8,8 @@ from support import HydroResults, write_to_hdf5
 from support import radial_density
 from support import setup_directories
 from viewer import plot_all
+from viewer import plot_steptimes
+from viewer import plot_energy
 
 from amuse.units import units
 from amuse.units import nbody_system
@@ -30,16 +32,17 @@ def main(options):
                      'plummer1':options.plummer1,\
                      'plummer2':options.plummer2}
 
+    setup_directories('bodies','hydroresults')
+
     if options.N_vs_t:
         create_N_vs_t(options.N_vs_t)
 
-    if options.N_vs_E:
+    elif options.N_vs_E:
         create_N_vs_E(options.N_vs_E)
 
-    setup_directories('bodies','hydroresults')
+    else:
+        results = run_hydrodynamics(**hydro_options)
 
-    results = run_hydrodynamics(**hydro_options)
-    
     if options.results_out:
         write_to_hdf5('hydroresults/'+options.results_out,\
                       results.__dict__)
@@ -199,21 +202,25 @@ def create_N_vs_t(filename, N_list=None):
     if N_list:
         N = N_list
     else:
-        N = [10, 50, 100, 500, 1000, 5000, 10000] 
+        N = [100, 500, 1000, 5000, 10000] 
 
-    total_runtimes = []
+    total_runtimes = AdaptingVectorQuantity() 
     for nr_particles in N: 
-        start_time = time.time()
+        start_time = time.time() |units.s
         run_hydrodynamics(N=nr_particles, n_steps=1)
-        total_runtime = time.time() - start_time
-        total_runtimes.append((total_runtime, nr_particles))
+        end_time = time.time() |units.s
+        total_runtime = end_time - start_time
+        total_runtimes.append(total_runtime)
 
     N_as_vq = N | units.no_unit 
-    total_runtimes_as_vq = total_runtimes | units.s
 
-    data = {'N':N_as_vq, 'runtimes':total_runtimes_as_vq}
+    data = {'N':N_as_vq, 'runtimes':total_runtimes}
     results = HydroResults(data)
-    results.writeto_hdf5file(filename)
+
+    write_to_hdf5('hydroresults/'+filename,\
+                  results.__dict__)
+    pngfilename = options.N_vs_t.split('.')[0]+'.png'
+    plot_steptimes(results, filepath = "plots/"+pngfilename)
 
 def create_N_vs_E(filename, N_list=None):
     """ Iteratively runs run_hydrodynamics for several N in order to 
@@ -223,19 +230,26 @@ def create_N_vs_E(filename, N_list=None):
     if N_list:
         N = N_list
     else:
-        N = range(10, 1000, 50) 
+        N = range(100, 1000, 100) 
 
-    energy_errors = []
+    energy_errors = AdaptingVectorQuantity() 
     for nr_particles in N: 
-        energy_error = run_hydrodynamics(N=nr_particles, n_steps=100)
-        energy_errors.append((energy_error, nr_particles))
+        results = run_hydrodynamics(N=nr_particles, n_steps=50)
+        energy_begin = results.total_energy[0]
+        energy_end = results.total_energy[-1]
+        energy_error = (energy_begin-energy_end)/energy_end
+        energy_error = energy_error |units.no_unit
+        energy_errors.append(energy_error)
 
     N_as_vq = N | units.no_unit 
-    energy_errors_as_vq = energy_errors | units.s
 
-    data = {'N':N_as_vq, 'energyerror':energy_errors_as_vq}
+    data = {'N':N_as_vq, 'energy_errors':energy_errors}
     results = HydroResults(data)
-    results.writeto_hdf5file(filename)
+
+    write_to_hdf5('hydroresults/'+filename,\
+                  results.__dict__)
+    pngfilename = options.N_vs_E.split('.')[0]+'.png'
+    plot_energy(results, filepath = "plots/"+pngfilename)
 
 def drawwidget(proces_discription):
     widgets = [proces_discription+": ", pb.Percentage(), ' ',
@@ -262,11 +276,11 @@ def new_option_parser():
                       dest="Rvir", type="float", default = 1|units.RSun,
                       help="Radius of cloud [%default]")
     result.add_option("-T", dest="N_vs_t", action='store',\
-                      default = None,\
-                      help="Create plot of one-step time vs N.")
+                      default = None, type='string',\
+                      help="Filename for N vs time hdf5 file.")
     result.add_option("-E", dest="N_vs_E", action='store',\
-                      default = None,\
-                      help="Create plot of N vs energy error.")
+                      default = None, type='string',\
+                      help="Filename for N vs Energy hdf5 file.")
     result.add_option("-H", dest="results_out", action='store',\
                       default = None,\
                       help="Filename for plotting data (hdf5 format).")
