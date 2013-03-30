@@ -16,11 +16,34 @@ from support import read_from_hdf5
 def main(options):
     """ Loads HydroResults instance from an hdf5 file and plots the 
     results."""
-    filepath = options.hdf5file
-    results = read_from_hdf5(filepath)
 
-    plot_all(results, filepath = filepath)
+    if options.simresults:
+        filepath = options.simresults
+        results = read_from_hdf5(filepath)
+        filepath = new_path_extension(filepath, 'plots', 'png')
+        plot_all(results, filepath = filepath)
+
+    if options.energy_results:
+        filepath = options.energy_results
+        results = read_from_hdf5(filepath)
+        filepath = new_path_extension(filepath, 'plots', 'png')
+        plot_energy(results, filepath = filepath)
+    
+    if options.runtime_results:
+        filepath = options.runtime_results
+        results = read_from_hdf5(filepath)
+        filepath = new_path_extension(filepath, 'plots', 'png')
+        plot_steptimes(results, filepath = filepath)
+
     return 0 
+
+def new_path_extension(filepath, newpath, extension):
+    """ Returns a new path/filename derived from the old 
+    path/filename."""
+    filename = os.path.split(filepath)[1]
+    filename = os.path.splitext(filename)[0]+"."+extension
+    filepath = "/".join([newpath,filename])
+    return filepath
 
 def plot_all(results, filepath=None):
     """ Plots some attributes of a HydroResults instance and saves it
@@ -60,7 +83,7 @@ def plot_all(results, filepath=None):
     ax1.plot(times.value_in(times.unit), lr1.value_in(lr1.unit),\
              label='10%',  **theme.line)
     ax1.plot(times.value_in(times.unit), lr2.value_in(lr1.unit),\
-             label='25%', **theme.yellowline)
+             label='25%', **theme.blueline)
     ax1.plot(times.value_in(times.unit), lr3.value_in(lr1.unit),\
              label='50%', **theme.redline)
     ax1.plot(times.value_in(times.unit), lr4.value_in(lr1.unit),\
@@ -74,7 +97,7 @@ def plot_all(results, filepath=None):
     ax2.plot(times.value_in(times.unit), L.value_in(Lx.unit),\
              label='L', **theme.line )
     ax2.plot(times.value_in(times.unit), Lx.value_in(Lx.unit),\
-             label='Lx', **theme.yellowline )
+             label='Lx', **theme.blueline )
     ax2.plot(times.value_in(times.unit), Ly.value_in(Lx.unit),\
              label='Ly', **theme.redline )
     ax2.plot(times.value_in(times.unit), Lz.value_in(Lx.unit),\
@@ -88,7 +111,7 @@ def plot_all(results, filepath=None):
     ax3.plot(times.value_in(times.unit), Ekin.value_in(Ekin.unit),\
              label='Kinetic',  **theme.redline)
     ax3.plot(times.value_in(times.unit), Epot.value_in(Ekin.unit),\
-             label='Potential', **theme.yellowline)
+             label='Potential', **theme.greenline)
     ax3.plot(times.value_in(times.unit), Etot.value_in(Ekin.unit),\
              label='Total',**theme.line)
 
@@ -101,7 +124,7 @@ def plot_all(results, filepath=None):
              label='Initial', **theme.line )
     ax4.plot(radius_final.value_in(radius_final.unit),\
              densities_final.value_in(densities_initial.unit),\
-             label='Final', **theme.yellowline )
+             label='Final', **theme.redline )
 
     ax4.set_xlabel('Radius in %s'%radius_initial.unit.__str__())
     ax4.set_ylabel('Density in %s'%densities_initial.unit.__str__())
@@ -112,30 +135,37 @@ def plot_all(results, filepath=None):
     if filepath:
         plt.savefig(filepath)
 
-def plot_steptimes(steptimes, filepath = None):
-    N = results.N
-    times = results.runtimes
-    fig = plt.figure()
+def plot_steptimes(results, filepath = None):
+    """ Plot the number of particles versus the time for one
+    step."""
+    nr_of_particles = results.N.value_in(results.N.unit)
+    steptimes = results.runtimes.value_in(units.s)
+    dots = theme.dots
+    dots['ms'] = 4
+
+    fig = plt.figure(figsize=(12,12), dpi=300)
     ax1 = fig.add_subplot(111)
-    ax1.plot(range(len(steptimes)), steptimes, **yellowline)
-    ax1.set_xlabel('N')
-    ax1.set_ylabel('step time [in seconds]')
+    ax1.plot(nr_of_particles, steptimes, **dots)
+    ax1.set_xlabel('Number of particles')
+    ax1.set_ylabel('Runtime in seconds for 1 step')
  
     if filepath:
         plt.savefig(filepath)
 
-def plot_energy(energy, energy_error, filepath = None):
-    fig = plt.figure()
-    ax1 = fig.add_subplot(211)
-    ax2 = fig.add_subplot(212)
+def plot_energy(results, filepath = None):
+    """ Plot the number of particles versus the energy error."""
+    nr_of_particles = results.N.value_in(units.no_unit)
+    energy_errors = results.energy_errors.value_in(units.no_unit)
 
-    ax1.plot(range(len(energy)), energy, **yellowline)
-    ax1.set_xlabel('N')
-    ax1.set_ylabel('energy [%s]'%value_in)
+    dots = theme.dots
+    dots['ms'] = 4
 
-    ax2.plot(range(len(energy)), energy_error, **yellowline)
-    ax2.set_xlabel('N')
-    ax2.set_ylabel('energy_error')
+    fig = plt.figure(figsize=(12,12), dpi=300)
+    ax1 = fig.add_subplot(111)
+
+    ax1.plot(nr_of_particles, energy_errors, **dots)
+    ax1.set_xlabel('Number of particles')
+    ax1.set_ylabel('Energy error')
 
     if filepath:
         plt.savefig(filepath)
@@ -145,16 +175,16 @@ def parse_sysargs(sysargs):
     parser.set_defaults(test=False, skip_table=False)
 
     parser.add_option("-f", "--file", action="store",\
-                      dest="hdf5file", default=None,\
-                      help="HDF5 file to open")
+                      dest="simresults", default=None,\
+                      help="Simulation results HDF5 file to open")
 
-    parser.add_option("-e", "--energy", action="store_true",\
-                      dest="plot_NvsE", default=False,\
-                      help="help txt")
+    parser.add_option("-e", "--energy", action="store",\
+                      dest="energy_results", default=None,\
+                      help="Energy errors results hdf5 file")
 
-    parser.add_option("-t", "--times", action="store_true", \
-                      dest="plot_NvsT", default=False,\
-                      help="help txt")
+    parser.add_option("-t", "--times", action="store", \
+                      dest="runtime_results", default=None,\
+                      help="Runtimes results hdf5 file")
 
     options, args = parser.parse_args(sysargs[1:])
     return options

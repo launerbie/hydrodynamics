@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import time
 import numpy
 from progressbar import progressbar as pb
@@ -32,7 +33,7 @@ def main(options):
                      'plummer1':options.plummer1,\
                      'plummer2':options.plummer2}
 
-    setup_directories('bodies','hydroresults')
+    setup_directories('bodies','hydroresults','plots')
 
     if options.N_vs_t:
         create_N_vs_t(options.N_vs_t)
@@ -44,21 +45,20 @@ def main(options):
         results = run_hydrodynamics(**hydro_options)
 
     if options.results_out:
-        write_to_hdf5('hydroresults/'+options.results_out,\
-                      results.__dict__)
+        if os.path.dirname(options.results_out) == '':
+            filename ='hydroresults/'+options.results_out
+        write_to_hdf5(filename, results.__dict__)
         pngfilename = options.results_out.split('.')[0]+'.png'
         plot_all(results, filepath = "plots/"+pngfilename)
     return 0
 
-
 def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
                       t_end=0.5|units.day, n_steps=10,\
-                      vx = 2 |(units.RSun/units.day),\
+                      vx = 0 |(units.RSun/units.day),\
                       vy = 0 |(units.RSun/units.day),\
                       vz = 0 |(units.RSun/units.day),\
                       plummer1=None, plummer2=None,\
-                      bodyname = None,\
-                      smash=False):
+                      bodyname = None):
 
     """ Runs the hydrodynamics simulation and returns a HydroResults
     instance. 
@@ -103,7 +103,6 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
     fi = Fi(converter)
 
     if plummer1 and plummer2: 
-        smash=True
         eta_smash = 0.3 |units.day
         if plummer1 == plummer2:
             bodies1 = read_set_from_file(plummer1, format='hdf5')
@@ -112,16 +111,25 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
         else:
             bodies1 = read_set_from_file(plummer1, format='hdf5')
             bodies2 = read_set_from_file(plummer2, format='hdf5')
+
         bodies1.move_to_center()
         bodies2.move_to_center()
-        bodies1.x += (-1)*vx*eta_smash
-        bodies2.x += 1*vx*eta_smash
-        bodies1.vx += vx
-        bodies2.vx += (-1)*vx 
-        bodies1.vy += vy
-        bodies2.vy += (-1)*vy
-        bodies1.vz += vz
-        bodies2.vz += (-1)*vz
+
+        if vx.value_in(vx.unit) == 0  and vy.value_in(vy.unit) == 0 \
+            and vz.value_in(vz.unit) == 0:
+            bodies1.x += -1 |units.RSun
+            bodies2.x += 1 |units.RSun
+
+        else:
+            bodies1.x += (-1)*vx*eta_smash
+            bodies2.x += 1*vx*eta_smash
+            bodies1.vx += vx
+            bodies2.vx += (-1)*vx 
+            bodies1.vy += vy
+            bodies2.vy += (-1)*vy
+            bodies1.vz += vz
+            bodies2.vz += (-1)*vz
+
         bodies1.add_particles(bodies2)
         bodies = bodies1
 
@@ -160,11 +168,6 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
  
     fi.parameters.timestep = t_end/(n_steps+1)
 
-    if bodyname:
-        filename = "bodies/"+bodyname 
-    else:
-        filename = "bodies/body_N"+str(N)+"n"+str(n_steps)+".hdf5" 
-
     widget = drawwidget("Evolving")
     pbar = pb.ProgressBar(widgets=widget, maxval=len(timerange)).start()
 
@@ -179,7 +182,9 @@ def run_hydrodynamics(N=100, Mtot=1|units.MSun, Rvir=1|units.RSun,
         data['lagrangianradii'].append(fi.particles.LagrangianRadii(\
                                        unit_converter=converter,\
                                        mf=mass_fractions)[0])
-        if t == timerange[-1] and smash == False:
+        if t == timerange[-1] and bodyname:
+            if os.path.dirname(bodyname) == '':
+                filename = "bodies/"+bodyname 
             fi_to_framework.copy()
             write_set_to_file(bodies.savepoint(t), filename, "hdf5")
 
@@ -202,7 +207,9 @@ def create_N_vs_t(filename, N_list=None):
     if N_list:
         N = N_list
     else:
-        N = [100, 500, 1000, 5000, 10000] 
+        a = range(100,1000,100)
+        b = range(1000,10000,1000)
+        N = a+b
 
     total_runtimes = AdaptingVectorQuantity() 
     for nr_particles in N: 
@@ -222,7 +229,7 @@ def create_N_vs_t(filename, N_list=None):
     pngfilename = options.N_vs_t.split('.')[0]+'.png'
     plot_steptimes(results, filepath = "plots/"+pngfilename)
 
-def create_N_vs_E(filename, N_list=None):
+def create_N_vs_E(filename, N_list = None):
     """ Iteratively runs run_hydrodynamics for several N in order to 
     create the data for the N vs. Energy error plot. Writes data to hdf5
     file."""
@@ -230,7 +237,7 @@ def create_N_vs_E(filename, N_list=None):
     if N_list:
         N = N_list
     else:
-        N = range(100, 1000, 100) 
+        N = range(100, 1000, 50) 
 
     energy_errors = AdaptingVectorQuantity() 
     for nr_particles in N: 
@@ -283,7 +290,7 @@ def new_option_parser():
                       help="Filename for N vs Energy hdf5 file.")
     result.add_option("-H", dest="results_out", action='store',\
                       default = None,\
-                      help="Filename for plotting data (hdf5 format).")
+                      help="path/to/filename for plotting data (hdf5 format).")
     result.add_option("-B", dest="bodyname", action='store',\
                       default = None,\
                       help="Filename for resulting body (hdf5 format).")
@@ -295,7 +302,7 @@ def new_option_parser():
                       help="Second plummer sphere.")
     result.add_option("--vx", unit=(units.RSun/units.day),
                       dest="vx", type="float", \
-                      default = 2|(units.RSun/units.day),
+                      default = 0|(units.RSun/units.day),
                       help="Smash velocity x in RSun/day.[%default]")
     result.add_option("--vy", unit=(units.RSun/units.day),
                       dest="vy", type="float", \
@@ -310,6 +317,3 @@ def new_option_parser():
 if __name__ in ('__main__'):
     options, arguments = new_option_parser().parse_args()
     main(options)
-
-#fi.parameters.isothermal_flag = True
-#fi.parameters.integrate_entropy_flag = False

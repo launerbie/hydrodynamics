@@ -31,7 +31,7 @@ def runbright():
     mpl.rc('savefig', dpi=100, facecolor='w', edgecolor='w')
 
 if __name__ == "theme":
-    dark=True
+    dark=False
     redline     = dict(c='r', ls="-", lw=1, alpha=1.0)
     yellowline  = dict(c='y', ls="-", lw=1, alpha=1.0)
     blueline    = dict(c='b', ls="-", lw=1, alpha=1.0)
